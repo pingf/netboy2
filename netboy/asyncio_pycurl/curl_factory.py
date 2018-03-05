@@ -18,7 +18,7 @@ from netboy.util.data_info import update_data_from_info
 
 class CurlFactory:
     def __init__(self, data, info):
-        self.log = logging.getLogger(info.get('logger_name', 'worker'))
+        self.log = logging.getLogger(info.get('log', 'netboy'))
         self.m = pycurl.CurlMulti()
         self.m.handles = []
         self.data = data
@@ -87,6 +87,9 @@ class CurlFactory:
 
                 for c, errno, errmsg in err_list:
                     if errno in [28]:
+                        msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
+                            errmsg)
+                        self.log.warning(msg)
                         res = get_result(c)
                         res['errno'] = errno
                         res['errmsg'] = errmsg
@@ -100,7 +103,7 @@ class CurlFactory:
 
                         if c.data.get('retry'):
                             await sleep(0.2)
-                            response = curl_work(c.data, c.data.get('log', 'worker'))
+                            response = curl_work(c.data, c.data.get('log', 'netboy'))
                             if response:
                                 await sleep(0.1)
                                 res = get_result(c)

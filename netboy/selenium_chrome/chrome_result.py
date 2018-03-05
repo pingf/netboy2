@@ -7,7 +7,8 @@ def filter_chrome_result(data, driver):
         'code': lambda: data.get('fake_code'),
         'time': lambda: data.get('time'),
         'screen': lambda: driver.get_screenshot_as_base64(),
-        'cookies': lambda: driver.get_cookies(),
+        # 'cookies': lambda: driver.get_cookies(),
+        'cookie': lambda: driver.get_cookies(),
     }
     result = {}
     chrome_filter = data.get('filter')

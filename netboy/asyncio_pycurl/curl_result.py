@@ -119,7 +119,8 @@ def filter_curl_result(c):
         'ssl_verifyresult': lambda curl: curl.getinfo(pycurl.SSL_VERIFYRESULT),
         'num_connects': lambda curl: curl.getinfo(pycurl.NUM_CONNECTS),
         'content_length_download': lambda curl: curl.getinfo(pycurl.CONTENT_LENGTH_DOWNLOAD),
-        'cookielist': lambda curl: curl.getinfo(pycurl.INFO_COOKIELIST),
+        # 'cookielist': lambda curl: curl.getinfo(pycurl.INFO_COOKIELIST),
+        'cookie': lambda curl: curl.getinfo(pycurl.INFO_COOKIELIST),
 
         'httpauth_avail': lambda curl: curl.getinfo(pycurl.HTTPAUTH_AVAIL),
         'proxyauth_avail': lambda curl: curl.getinfo(pycurl.PROXYAUTH_AVAIL),

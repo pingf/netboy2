@@ -17,6 +17,7 @@ class ChromeFactory:
         self.log = logging.getLogger(info.get('logger_name', 'worker'))
         self.data = data
         self.info = info
+        self.log = logging.getLogger(info.get('log', 'netboy'))
         updated = update_data_from_info(data, info)
 
         for e in updated:
@@ -59,10 +60,15 @@ class ChromeFactory:
                 implicit_wait = d.get('wait', 5)
 
                 start = time.time()
+                url = d.get('url')
                 try:
-                    url = d.get('url')
+
+                    crawl_url = d.get('effect') or d.get('url')
+                    if not crawl_url.startswith('http'):
+                        crawl_url = 'http://' + crawl_url
+
                     self.driver.set_page_load_timeout(load_timeout)
-                    self.driver.get(url)
+                    self.driver.get(crawl_url)
                     self.driver.implicitly_wait(implicit_wait)
                     interact = d.get('interactive')
                     if interact:
@@ -71,6 +77,9 @@ class ChromeFactory:
                     end = time.time()
                     d['time'] = '%s' % (end - start)
                     response = get_result(d, self.driver)
+                    msg = "success! url: " + str(url) + ' effect: ' + str(self.driver.current_url)
+                    self.log.info(msg)
+
                 # except selenium.common.exceptions.TimeoutException as e:
                 #     end = time.time()
                 #     self.log.critical('crawl timeout: ' + str(e)+' '+str(type(e)))
@@ -81,7 +90,8 @@ class ChromeFactory:
                 except Exception as e:
                     end = time.time()
                     response_time = '%s' % (end - start)
-                    self.log.critical('crawl failed for %s: '%url + str(e)+' '+str(type(e)))
+                    msg = "28! url: " + str(url) + ' errtype: ' + str(type(e)) + ' errmsg: ' + str(e)
+                    self.log.warning(msg)
                     response = {
                         'url': url,
                         'effect': url,
@@ -92,8 +102,10 @@ class ChromeFactory:
                         "code": -1,
                         "time": response_time
                     }
-                responses.append(response)
                 self.trigger_it(d, response)
+                response.pop('data', None)
+                response.pop('screen', None)
+                responses.append(response)
             self.anaylse_it(responses)
         finally:
             self.driver.quit()
@@ -143,7 +155,7 @@ class ChromeFactory:
 
 if __name__ == '__main__':
     info = {
-        'screenshot': True
+        # 'screen': True
     }
     data = ['http://www.douban.com']
     f = ChromeFactory(data, info)

@@ -11,7 +11,6 @@ from netboy.util.loader import load
 
 app = App().app
 
-# caoe.install()
 
 coroutine_worker = app.task(bind=True)(celery_coroutine_worker)
 thread_worker = app.task(bind=True)(celery_thread_worker)

@@ -1,9 +1,7 @@
-from logcc.logcc import LogCC
-from termcc.cc import cc
-from termcc.core import red
+from copy import copy
 from worker.worker import Worker
 
-from netboy.util.setup_log import setup_log
+from netboy.asyncio_pycurl.curl_one import work as curl_work
 
 
 class NetBoy:
@@ -11,7 +9,7 @@ class NetBoy:
         self.worker = Worker(mode='celery')
         self.info = info if info else {}
         self.info['dummy'] = 'netboy.celery.tasks.dummy'
-
+        self.info['log'] = 'netboy'
 
     def use_socks5_proxy(self, proxy):
         p = proxy.split(':')
@@ -40,6 +38,18 @@ class NetBoy:
         self.info['analysers'] = analysers
         return self
 
+    def use_auth(self, user, password, group='default'):
+        self.info['auth'] = {
+            'user': user,
+            'password': password,
+            'group': group
+        }
+        return self
+
+    def use_info(self, info):
+        self.info = info
+        return self
+
     def use_spider(self, spider='pycurl'):
         if spider == 'pycurl':
             self.info['celery_worker'] = 'netboy.celery.tasks.coroutine_worker'
@@ -53,6 +63,11 @@ class NetBoy:
         self.info['celery_max_workers'] = workers
         self.info['celery_chunk_size'] = chunk_size1
         self.info['chunk_size'] = chunk_size2
+        return self
+
+    def use_logger(self, logger):
+        self.info['log'] = logger
+        return self
 
     def run(self, data):
         # 'celery_max_workers': 4,
@@ -61,6 +76,42 @@ class NetBoy:
         size = len(data)
 
         resp = self.worker.work(data, self.info)
+        return resp
+
+    def run_remote(self, url, data, callback_data=None):
+        triggers = self.info.get('triggers')
+        trigger_payload = {'trigger': 'netboy.support.triggers.post_it'}
+        if callback_data:
+            trigger_payload.update(callback_data)
+            if triggers:
+                self.info['triggers'].append(trigger_payload)
+            else:
+                self.info['triggers'] = [trigger_payload]
+
+        payload = {
+            'url': url,
+            'method': 'post',
+            'postfields': {
+                'info': copy(self.info),
+                'data': data
+            }
+        }
+
+        resp = curl_work(payload, logger='netboy')
+        return resp
+
+    def register_remote(self, url, user, password, group='default'):
+        payload = {
+            'url': url,
+            'method': 'post',
+            'postfields': {
+                'user': user,
+                'password': password,
+                'group': group
+            }
+        }
+
+        resp = curl_work(payload, logger='netboy')
         return resp
 
 
@@ -74,21 +125,21 @@ if __name__ == '__main__':
 
                # 'http://www.csdn.net',
                'http://www.bing.com',
-               'http://www.douban.com',
-               'http://www.qxjtzf.com',
-               'http://www.lyzbj.org.cn',
-               'http://www.hnhxrs.com',
-               'http://www.puyangdangshi.com',
-               'http://www.bfhbj.com',
-               'http://www.xxlyj.cn',
-               'http://www.xcsnks.cn',
-               'http://www.xcswmw.cn',
-               'http://www.xcsqxj.com',
-               'http://www.hnpopss.gov.cn',
-               'http://www.lyjtj.com',
-               'http://www.rndj.com',
-               'http://www.nxzj.com.cn',
-               'http://www.ycxyw.gov.cn',
+               # 'http://www.douban.com',
+               # 'http://www.qxjtzf.com',
+               # 'http://www.lyzbj.org.cn',
+               # 'http://www.hnhxrs.com',
+               # 'http://www.puyangdangshi.com',
+               # 'http://www.bfhbj.com',
+               # 'http://www.xxlyj.cn',
+               # 'http://www.xcsnks.cn',
+               # 'http://www.xcswmw.cn',
+               # 'http://www.xcsqxj.com',
+               # 'http://www.hnpopss.gov.cn',
+               # 'http://www.lyjtj.com',
+               # 'http://www.rndj.com',
+               # 'http://www.nxzj.com.cn',
+               # 'http://www.ycxyw.gov.cn',
                # 'http://www.hnyssw.gov.cn',
                # 'http://www.hbcs.gov.cn',
                # 'http://www.hnxcdj.com',
@@ -116,5 +167,4 @@ if __name__ == '__main__':
         'pycurl'
     ).use_filter(['url', 'title']).use_workers()
     resp = boy.run(data)
-
-    print(resp)
+    # print(resp)

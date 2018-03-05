@@ -30,7 +30,6 @@ salt = 'salted'
 
 def hash_func(value, seed):
     a = mmh3.hash128(salt + str(value) + '____' + str(seed))
-    # print(a, '>>>')
     return a
 
 

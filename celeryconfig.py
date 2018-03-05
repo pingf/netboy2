@@ -12,3 +12,4 @@ result_backend = os.environ.get('CELERY_RESULT_URL', 'redis://:hello@' + ip + ':
 
 # worker_prefetch_multiplier = 1
 # worker_concurrency = 4
+# worker_hijack_root_logger = False
