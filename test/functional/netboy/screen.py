@@ -8,6 +8,7 @@ def print_screen(payload, response):
     log_name = payload.get('log')
     log = logging.getLogger(log_name)
     if response.get('screen'):
+        print(response.get('title'))
         screen_100 = response['screen'][:100]
         log.info('screen:' + screen_100)
     else:
