@@ -4,11 +4,11 @@ from netboy.netboy import NetBoy
 from netboy.util.setup_log import setup_log
 
 
-def print_screen(payload, reponse):
+def print_screen(payload, response):
     log_name = payload.get('log')
     log = logging.getLogger(log_name)
-    screen_100 = reponse['screen'][:100]
-    log.info(screen_100)
+    screen_100 = response['screen'][:100]
+    log.info('screen:'+screen_100)
 
 
 if __name__ == '__main__':

@@ -63,7 +63,7 @@ if __name__ == '__main__':
         'chunk_size': 2,
         'queue': 'worker',
         'dummy': 'netboy.celery.tasks.dummy',
-        'filter': ['url', 'cookies'],
+        'filter': ['url', 'title'],
         'triggers': [
             {'hello': 'world'},
             {'hello2': 'world2'},
