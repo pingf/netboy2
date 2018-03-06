@@ -11,7 +11,7 @@ def setup_log(log_name):
     log.update_color_formatter('name', 'CRITICAL', cc(':reverse_light_magenta::black::bold:'))
 
     log.update_color_formatter('msg', 'DEBUG', cc(':white::bold::beer:  :white:', use_aliases=True))
-    log.update_color_formatter('msg', 'INFO', cc(':green::bold::running:  :green:', use_aliases=True))
+    log.update_color_formatter('msg', 'INFO', cc(':green::bold::play_button:  :green:', use_aliases=True))
     log.update_color_formatter('msg', 'WARNING', cc(':yellow::bold::yin_yang:  :yellow:', use_aliases=True))
     log.update_color_formatter('msg', 'ERROR', cc(':red::x:  :red:', use_aliases=True))
     log.update_color_formatter('msg', 'CRITICAL',

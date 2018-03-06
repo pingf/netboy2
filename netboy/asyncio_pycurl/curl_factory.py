@@ -1,7 +1,6 @@
-import json
 import logging
-from copy import copy
 
+from netboy.util.loader import load
 import pycurl
 
 from asyncio import sleep
@@ -46,6 +45,96 @@ class CurlFactory:
 
     def freelist(self):
         return self.m.handles[:]
+
+    def sync_run(self):
+        responses = []
+
+        frees = self.freelist()
+
+        num_processed = 0
+        while num_processed < self.num_urls:
+            # If there is an url to process and a free curl object, add to multi stack
+            while self.queue and frees:
+                data = self.queue.pop(0)
+                url = data['url']
+                c = frees.pop()
+                setup_curl(c, data)
+                self.m.add_handle(c)
+                c.data = data
+
+            # Run the internal curl state machine for the multi stack
+            while 1:
+                ret, num_handles = self.m.perform()
+                if ret != pycurl.E_CALL_MULTI_PERFORM:
+                    break
+            # Check for curl objects which have terminated, and add them to the freelist
+            while 1:
+                num_q, ok_list, err_list = self.m.info_read()
+                for c in ok_list:
+                    self.m.remove_handle(c)
+                    msg = "success! url: " + str(c.data.get('url')) + ' effect: ' + str(
+                        c.getinfo(pycurl.EFFECTIVE_URL)) + ' code: ' + str(
+                        c.getinfo(pycurl.HTTP_CODE))
+                    self.log.info(msg)
+                    res = get_result(c)
+
+                    self.trigger_it(c.data, res)
+
+                    frees.append(c)
+                    res.pop('data', None)
+                    responses.append(res)
+
+                for c, errno, errmsg in err_list:
+                    if errno in [28]:
+                        msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
+                            errmsg)
+                        self.log.warning(msg)
+                        res = get_result(c)
+                        res['errno'] = errno
+                        res['errmsg'] = errmsg
+                        self.trigger_it(c.data, res)
+                        res.pop('data', None)
+                        responses.append(res)
+                    else:
+                        msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
+                            errmsg)
+                        self.log.warning(msg)
+
+                        if c.data.get('retry'):
+                            response = curl_work(c.data, c.data.get('log', 'netboy'))
+                            if response:
+                                res = get_result(c)
+                                self.trigger_it(c.data, res)
+                                res.pop('data', None)
+                                responses.append(res)
+                            else:
+                                res = {
+                                    'state': 'error',
+                                    'spider': 'pycurl',
+                                    'errno': errno,
+                                    'errmsg': errmsg
+                                }
+                                responses.append(res)
+                        else:
+                            res = {
+                                'state': 'error',
+                                'spider': 'pycurl',
+                                'errno': errno,
+                                'errmsg': errmsg
+                            }
+                            responses.append(res)
+                    self.trigger_it(c.data, res)
+                    self.m.remove_handle(c)
+                    frees.append(c)
+                num_processed = num_processed + len(ok_list) + len(err_list)
+                if num_q == 0:
+                    break
+            # Currently no more I/O is pending, could do something in the meantime
+            # (display a progress bar, etc.).
+            # We just call select() to sleep until some more data is available.
+            self.m.select(0.2)
+        self.anaylse_it(responses)
+        return responses
 
     async def run(self):
         responses = []
@@ -155,11 +244,17 @@ class CurlFactory:
                     'response': responses,
                 }
                 try:
-                   App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
-                                  queue=self.info.get('queue', 'worker'),
-                                  routing_key=self.info.get('queue', 'worker'))
+                    if payload.get('mode', 'celery') == 'celery':
+                       resp = App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
+                                      queue=self.info.get('queue', 'worker'),
+                                      routing_key=self.info.get('queue', 'worker'))
+                    else:
+                        analyser_func = load(analyser) if isinstance(analyser, str) else load(analyser.get('analyser'))
+                        resp = analyser_func(responses)
+                    return resp
                 except Exception as e:
                     self.log.critical('analyser failed: '+str(e))
+                    return None
 
     def trigger_it(self, payload, response):
         triggers = payload.pop('triggers', None)
@@ -180,8 +275,15 @@ class CurlFactory:
                     'response': response,
                 }
                 try:
-                    App().app.send_task('netboy.celery.tasks.trigger_task', kwargs=sig, countdown=1,
-                                  queue=payload.get('queue'),
-                                  routing_key=payload.get('queue'))
+                    if payload.get('mode', 'celery') == 'celery':
+                        resp = App().app.send_task('netboy.celery.tasks.trigger_task', kwargs=sig, countdown=1,
+                                      queue=payload.get('queue'),
+                                      routing_key=payload.get('queue'))
+                    else:
+                        trigger_func = load(trigger) if isinstance(trigger, str) else load(trigger.get('trigger'))
+                        resp = trigger_func(payload, response)
+                    return resp
+
                 except Exception as e:
                     self.log.critical('trigger failed: '+str(e))
+                    return None

@@ -6,7 +6,6 @@ from netboy.asyncio_pycurl.curl_one import work as curl_work
 
 class NetBoy:
     def __init__(self, info=None):
-        self.worker = Worker(mode='celery')
         self.info = info if info else {}
         self.info['dummy'] = 'netboy.celery.tasks.dummy'
         self.info['log'] = 'netboy'
@@ -46,17 +45,50 @@ class NetBoy:
         }
         return self
 
+    def use_useragent(self, useragent):
+        self.info['useragent'] = useragent
+        return self
+
+    def use_timeout(self, timeout=None, connect=None, wait=None):
+        if timeout:
+            self.info['timeout'] = timeout
+        if connect:
+            self.info['connecttimeout'] = connect
+        if wait:
+            self.info['wait'] = wait
+        return self
+
     def use_info(self, info):
         self.info = info
         return self
 
+    def use_mode(self, mode):
+        self.info['mode'] = mode
+        spider = self.info.get('spider')
+        if spider:
+            self.use_spider(spider)
+        return self
+
     def use_spider(self, spider='pycurl'):
-        if spider == 'pycurl':
-            self.info['celery_worker'] = 'netboy.celery.tasks.coroutine_worker'
-            self.info['worker'] = 'netboy.celery.tasks.coroutine_worker_do_crawl'
-        elif spider == 'chrome':
-            self.info['celery_worker'] = 'netboy.celery.tasks.thread_worker'
-            self.info['worker'] = 'netboy.celery.tasks.thread_worker_do_crawl'
+        self.info['spider'] = spider
+        mode = self.info.get('mode', 'thread')
+        if mode == 'celery':
+            if spider == 'pycurl':
+                self.info['celery_worker'] = 'netboy.celery.tasks.coroutine_worker'
+                self.info['worker'] = 'netboy.celery.tasks.coroutine_worker_do_crawl'
+            elif spider == 'chrome':
+                self.info['celery_worker'] = 'netboy.celery.tasks.thread_worker'
+                self.info['worker'] = 'netboy.celery.tasks.thread_worker_do_crawl'
+        elif mode == 'coroutine':
+            if spider == 'pycurl':
+                self.info['worker'] = 'netboy.asyncio_pycurl.async_handler.curl_handler'
+            elif spider == 'chrome':
+                self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.async_chrome_driver_handler'
+        else:
+            if spider == 'pycurl':
+                self.info['worker'] = 'netboy.asyncio_pycurl.async_handler.sync_curl_handler'
+            elif spider == 'chrome':
+                self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
         return self
 
     def use_workers(self, workers=4, chunk_size1=40, chunk_size2=8):
@@ -70,15 +102,12 @@ class NetBoy:
         return self
 
     def run(self, data):
-        # 'celery_max_workers': 4,
-        # 'celery_chunk_size': 10,
-        # 'chunk_size': 5,
-        size = len(data)
-
+        self.worker = Worker(mode=self.info.get('mode', 'thread'))
         resp = self.worker.work(data, self.info)
         return resp
 
     def run_remote(self, url, data, callback_data=None):
+        self.worker = Worker(mode=self.info.get('mode', 'thread'))
         triggers = self.info.get('triggers')
         trigger_payload = {'trigger': 'netboy.support.triggers.post_it'}
         if callback_data:

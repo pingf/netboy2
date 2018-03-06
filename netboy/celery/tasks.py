@@ -1,3 +1,5 @@
+import logging
+
 from worker.celery import celery_coroutine_worker, celery_thread_worker
 from wrap.exception import safe
 from wrap.show import show
@@ -5,32 +7,34 @@ from wrap.show import show
 from netboy.asyncio_pycurl.async_handler import curl_handler
 from netboy.celery.app import App
 from netboy.selenium_chrome.chrome_driver_handler import chrome_driver_handler
-from netboy.util import caoe
 
 from netboy.util.loader import load
 
 app = App().app
 
-
 coroutine_worker = app.task(bind=True)(celery_coroutine_worker)
 thread_worker = app.task(bind=True)(celery_thread_worker)
-
-
 
 
 @show(name='netboy')
 @safe(Exception, return_value={"state": "error"})
 async def coroutine_worker_do_crawl(data, info):
-    print('coroutine worker do crawl!')
+    logger = info.get('log', 'netboy')
+    log = logging.getLogger(logger)
+    log.info('coroutine worker do crawl!')
     resp = await curl_handler(data, info)
     return resp
+
 
 @show(name='netboy')
 @safe(Exception, return_value={"state": "error"})
 def thread_worker_do_crawl(data, info):
-    print('thread worker do crawl!')
+    logger = info.get('log', 'netboy')
+    log = logging.getLogger(logger)
+    log.info('thread worker do crawl!')
     resp = chrome_driver_handler(data, info)
     return resp
+
 
 @safe(Exception, return_value={"state": "error"})
 def test(data, info):

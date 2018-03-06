@@ -18,6 +18,11 @@ async def curl_handler(data, info):
     return r
 
 
+def sync_curl_handler(data, info):
+    factory = CurlFactory(data, info)
+    factory.allocate()
+    r = factory.sync_run()
+    return r
 
 
 
