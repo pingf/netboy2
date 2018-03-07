@@ -69,8 +69,8 @@ def setup_curl(c, d):
 
     c.setopt(pycurl.FOLLOWLOCATION, d.get('followlocation', 1))
     c.setopt(pycurl.MAXREDIRS, d.get('followlocation', 1))
-    c.setopt(pycurl.CONNECTTIMEOUT, d.get('connecttimeout', 30))
-    c.setopt(pycurl.TIMEOUT, d.get('timeout', 300))
+    c.setopt(pycurl.CONNECTTIMEOUT, d.get('connecttimeout', 10))
+    c.setopt(pycurl.TIMEOUT, d.get('timeout', 20))
     c.setopt(pycurl.NOSIGNAL, d.get('nosignal', 1))
     c.setopt(pycurl.USERAGENT, d.get('useragent', DEFAULT_USER_AGENT))
     c.setopt(pycurl.SSL_VERIFYPEER, d.get('ssl_verifypeer', 0))

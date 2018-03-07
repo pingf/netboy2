@@ -58,9 +58,18 @@ class CurlFactory:
                 data = self.queue.pop(0)
                 url = data['url']
                 c = frees.pop()
+
+                ret_data = self.prepare_it(data)
+
+                if isinstance(ret_data, dict):
+                    data = ret_data
+                    if data.get('skip'):
+                        self.num_urls -= 1
+                        continue
                 setup_curl(c, data)
                 self.m.add_handle(c)
                 c.data = data
+
 
             # Run the internal curl state machine for the multi stack
             while 1:
@@ -78,21 +87,22 @@ class CurlFactory:
                     self.log.info(msg)
                     res = get_result(c)
 
-                    self.trigger_it(c.data, res)
+                    res = self.trigger_it(c.data, res)
 
                     frees.append(c)
                     res.pop('data', None)
                     responses.append(res)
 
                 for c, errno, errmsg in err_list:
-                    if errno in [28]:
+                    if errno == 28:
                         msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
                             errmsg)
                         self.log.warning(msg)
                         res = get_result(c)
+                        res['state'] = 'error'
                         res['errno'] = errno
                         res['errmsg'] = errmsg
-                        self.trigger_it(c.data, res)
+                        res = self.trigger_it(c.data, res)
                         res.pop('data', None)
                         responses.append(res)
                     else:
@@ -104,7 +114,7 @@ class CurlFactory:
                             response = curl_work(c.data, c.data.get('log', 'netboy'))
                             if response:
                                 res = get_result(c)
-                                self.trigger_it(c.data, res)
+                                res = self.trigger_it(c.data, res)
                                 res.pop('data', None)
                                 responses.append(res)
                             else:
@@ -123,7 +133,7 @@ class CurlFactory:
                                 'errmsg': errmsg
                             }
                             responses.append(res)
-                    self.trigger_it(c.data, res)
+                    res = self.trigger_it(c.data, res)
                     self.m.remove_handle(c)
                     frees.append(c)
                 num_processed = num_processed + len(ok_list) + len(err_list)
@@ -132,7 +142,7 @@ class CurlFactory:
             # Currently no more I/O is pending, could do something in the meantime
             # (display a progress bar, etc.).
             # We just call select() to sleep until some more data is available.
-            self.m.select(0.2)
+            self.m.select(0.1)
         self.anaylse_it(responses)
         return responses
 
@@ -148,6 +158,14 @@ class CurlFactory:
                 data = self.queue.pop(0)
                 url = data['url']
                 c = frees.pop()
+
+                ret_data = self.prepare_it(data)
+
+                if isinstance(ret_data, dict):
+                    data = ret_data
+                    if data.get('skip'):
+                        self.num_urls -= 1
+                        continue
                 setup_curl(c, data)
                 self.m.add_handle(c)
                 c.data = data
@@ -168,7 +186,7 @@ class CurlFactory:
                     self.log.info(msg)
                     res = get_result(c)
 
-                    self.trigger_it(c.data, res)
+                    res = self.trigger_it(c.data, res)
 
                     frees.append(c)
                     res.pop('data', None)
@@ -182,7 +200,7 @@ class CurlFactory:
                         res = get_result(c)
                         res['errno'] = errno
                         res['errmsg'] = errmsg
-                        self.trigger_it(c.data, res)
+                        res = self.trigger_it(c.data, res)
                         res.pop('data', None)
                         responses.append(res)
                     else:
@@ -196,7 +214,7 @@ class CurlFactory:
                             if response:
                                 await sleep(0.1)
                                 res = get_result(c)
-                                self.trigger_it(c.data, res)
+                                res = self.trigger_it(c.data, res)
                                 res.pop('data', None)
                                 responses.append(res)
                             else:
@@ -215,7 +233,7 @@ class CurlFactory:
                                 'errmsg': errmsg
                             }
                             responses.append(res)
-                    self.trigger_it(c.data, res)
+                    res = self.trigger_it(c.data, res)
                     self.m.remove_handle(c)
                     frees.append(c)
                 num_processed = num_processed + len(ok_list) + len(err_list)
@@ -245,16 +263,17 @@ class CurlFactory:
                 }
                 try:
                     if payload.get('mode', 'celery') == 'celery':
-                       resp = App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
+                       App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
                                       queue=self.info.get('queue', 'worker'),
                                       routing_key=self.info.get('queue', 'worker'))
                     else:
                         analyser_func = load(analyser) if isinstance(analyser, str) else load(analyser.get('analyser'))
                         resp = analyser_func(responses)
-                    return resp
+                        if resp is not None:
+                            responses = resp
                 except Exception as e:
-                    self.log.critical('analyser failed: '+str(e))
-                    return None
+                    self.log.critical('analyser failed: '+str(e)+' type: '+str(type(e)))
+        return responses
 
     def trigger_it(self, payload, response):
         triggers = payload.pop('triggers', None)
@@ -269,21 +288,41 @@ class CurlFactory:
                 # pay['task_id'] = payload.get('task_id')
                 # pay['task_name'] = payload.get('task_name')
                 # pay['url'] = payload.get('url')
+                if isinstance(trigger, str):
+                    trigger = {'trigger': trigger}
                 payload['trigger'] = trigger
                 sig = {
                     'payload': payload,
                     'response': response,
                 }
                 try:
-                    if payload.get('mode', 'celery') == 'celery':
+                    if trigger.get('mode', 'sync') == 'celery' and payload.get('mode') == 'celery':
                         resp = App().app.send_task('netboy.celery.tasks.trigger_task', kwargs=sig, countdown=1,
                                       queue=payload.get('queue'),
                                       routing_key=payload.get('queue'))
                     else:
                         trigger_func = load(trigger) if isinstance(trigger, str) else load(trigger.get('trigger'))
                         resp = trigger_func(payload, response)
-                    return resp
+                        if resp:
+                            if resp.get('update'):
+                                response = resp
 
                 except Exception as e:
-                    self.log.critical('trigger failed: '+str(e))
-                    return None
+                    self.log.critical('trigger failed: '+str(e)+' type: '+str(type(e)))
+        return response
+
+    def prepare_it(self, data):
+        prepares = data.pop('prepares', None)
+        if prepares:
+            for prepare in prepares:
+                data['prepare'] = prepare
+                try:
+                    prepare_func = load(prepare) if isinstance(prepare, str) else load(prepare.get('prepare'))
+                    resp = prepare_func(data)
+                    if resp is not None:
+                        if resp.get('update'):
+                            data = resp
+
+                except Exception as e:
+                    self.log.critical('prepare failed: '+str(e)+' type: '+str(type(e)))
+        return data

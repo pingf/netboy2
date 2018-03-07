@@ -29,6 +29,10 @@ class NetBoy:
         self.info['filter'] = result_filter
         return self
 
+    def use_prepares(self, prepares):
+        self.info['prepares'] = prepares
+        return self
+
     def use_triggers(self, triggers):
         self.info['triggers'] = triggers
         return self
@@ -49,13 +53,15 @@ class NetBoy:
         self.info['useragent'] = useragent
         return self
 
-    def use_timeout(self, timeout=None, connect=None, wait=None):
+    def use_timeout(self, timeout=None, connect=None, wait=None, script=None):
         if timeout:
             self.info['timeout'] = timeout
         if connect:
             self.info['connecttimeout'] = connect
         if wait:
             self.info['wait'] = wait
+        if script:
+            self.info['script_timeout'] = script
         return self
 
     def use_info(self, info):
@@ -91,10 +97,11 @@ class NetBoy:
                 self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
         return self
 
-    def use_workers(self, workers=4, chunk_size1=40, chunk_size2=8):
+    def use_workers(self, workers=8, chunk_size1=40, chunk_size2=8):
         self.info['celery_max_workers'] = workers
-        self.info['celery_chunk_size'] = chunk_size1
-        self.info['chunk_size'] = chunk_size2
+        self.info['max_workers'] = workers
+        self.info['celery_chunk_size'] = max(chunk_size1, chunk_size2)
+        self.info['chunk_size'] = min(chunk_size1, chunk_size2)
         return self
 
     def use_logger(self, logger):

@@ -15,7 +15,7 @@ Install netboy::
     pip install netboy
 
 
-Use logcc:
+Use netboy:
 
 .. code-block:: python
 

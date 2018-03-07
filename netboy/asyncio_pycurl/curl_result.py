@@ -91,6 +91,7 @@ def filter_content_result(c, json_response=False):
 
 def filter_curl_result(c):
     filter_map = {
+        'url': lambda curl: curl.data.get('url'),
         'effect': lambda curl: curl.getinfo(pycurl.EFFECTIVE_URL),
         'ip': lambda curl: curl.getinfo(pycurl.PRIMARY_IP),
         'port': lambda curl: curl.getinfo(pycurl.PRIMARY_PORT),
