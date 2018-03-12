@@ -104,6 +104,7 @@ class CurlFactory:
                         res['state'] = 'error'
                         res['errno'] = errno
                         res['errmsg'] = errmsg
+                        res['url'] = c.data.get('url')
                         res = self.trigger_it(c.data, res)
                         if self.info.get('mode') == 'celery':
                             res.pop('data', None)
@@ -123,6 +124,7 @@ class CurlFactory:
                                 responses.append(res)
                             else:
                                 res = {
+                                    'url': c.data.get('url'),
                                     'state': 'error',
                                     'spider': 'pycurl',
                                     'errno': errno,
@@ -131,6 +133,7 @@ class CurlFactory:
                                 responses.append(res)
                         else:
                             res = {
+                                'url': c.data.get('url'),
                                 'state': 'error',
                                 'spider': 'pycurl',
                                 'errno': errno,
@@ -203,8 +206,10 @@ class CurlFactory:
                             errmsg)
                         self.log.warning(msg)
                         res = get_result(c)
+                        res['state'] = 'error'
                         res['errno'] = errno
                         res['errmsg'] = errmsg
+                        res['url'] = c.data.get('url')
                         res = self.trigger_it(c.data, res)
                         if self.info.get('mode') == 'celery':
                             res.pop('data', None)
@@ -226,6 +231,7 @@ class CurlFactory:
                                 responses.append(res)
                             else:
                                 res = {
+                                    'url': c.data.get('url'),
                                     'state': 'error',
                                     'spider': 'pycurl',
                                     'errno': errno,
@@ -234,6 +240,7 @@ class CurlFactory:
                                 responses.append(res)
                         else:
                             res = {
+                                'url': c.data.get('url'),
                                 'state': 'error',
                                 'spider': 'pycurl',
                                 'errno': errno,
