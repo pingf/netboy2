@@ -16,6 +16,18 @@ coroutine_worker = app.task(bind=True)(celery_coroutine_worker)
 thread_worker = app.task(bind=True)(celery_thread_worker)
 
 
+@app.task
+@show(name='netboy')
+@safe(Exception, return_value={"state": "error"})
+def final_callback(data, info):
+    final = info.get('final')
+    if final:
+        final_func = load(final)
+        if final_func:
+            return final_func(data, info)
+    return
+
+
 @show(name='netboy')
 @safe(Exception, return_value={"state": "error"})
 async def coroutine_worker_do_crawl(data, info):

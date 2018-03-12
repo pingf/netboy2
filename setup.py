@@ -14,7 +14,7 @@ def read(fname):
 
 setup(
     name='netboy',
-    version='2018.03.05',
+    version='2018.03.10',
     url='https://github.com/pingf/netboy2.git',
     license='BSD',
     author='Jesse MENG',
@@ -34,7 +34,7 @@ setup(
     platforms='any',
     install_requires=[
         'termcc', 'loader', 'aiohttp', 'aiofiles', 'websockets', 'pony', 'terminaltables', 'logcc', 'celery',
-        'inquirer', 'selenium', 'pycurl', 'worker', 'wrap'
+        'inquirer', 'selenium', 'pycurl', 'worker', 'wrap', 'redis'
     ],
 
     data_files=[

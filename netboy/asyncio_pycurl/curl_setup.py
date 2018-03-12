@@ -68,7 +68,7 @@ def setup_curl(c, d):
         return 0
 
     c.setopt(pycurl.FOLLOWLOCATION, d.get('followlocation', 1))
-    c.setopt(pycurl.MAXREDIRS, d.get('followlocation', 1))
+    c.setopt(pycurl.MAXREDIRS, d.get('maxredirs', 5))
     c.setopt(pycurl.CONNECTTIMEOUT, d.get('connecttimeout', 10))
     c.setopt(pycurl.TIMEOUT, d.get('timeout', 20))
     c.setopt(pycurl.NOSIGNAL, d.get('nosignal', 1))

@@ -37,7 +37,7 @@ def filter_content_result(c, json_response=False):
     result = {}
     curl_filter = c.data.get('filter')
     if not curl_filter:
-        curl_filter=['data', 'charset', 'title']
+        curl_filter = ['data', 'charset', 'title']
     if 'data' in curl_filter or 'charset' in curl_filter or 'title' in curl_filter:
         body = c.databuf.getvalue()
         charset = None
@@ -87,6 +87,16 @@ def filter_content_result(c, json_response=False):
                 result['charset'] = charset
     return result
 
+
+def filter_header_result(c):
+    result = {}
+    curl_filter = c.data.get('filter')
+    if not curl_filter:
+        curl_filter = ['data', 'charset', 'title']
+    if 'header' in curl_filter:
+        header = c.headers
+        result['header'] = header
+    return result
 
 
 def filter_curl_result(c):
@@ -144,6 +154,8 @@ def get_result(c):
     result = {'state': 'normal', 'spider': 'pycurl'}
     curl_result = filter_curl_result(c)
     content_result = filter_content_result(c)
+    header_result = filter_header_result(c)
     result.update(curl_result)
     result.update(content_result)
+    result.update(header_result)
     return result

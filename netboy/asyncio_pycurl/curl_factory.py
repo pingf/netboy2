@@ -1,5 +1,7 @@
 import logging
 
+from logcc.util.table import trace_table
+
 from netboy.util.loader import load
 import pycurl
 
@@ -11,7 +13,6 @@ from netboy.asyncio_pycurl.curl_setup import setup_curl
 from netboy.celery.app import App
 
 
-# from netboy.celery.tasks import trigger_task
 from netboy.util.data_info import update_data_from_info
 
 
@@ -90,7 +91,8 @@ class CurlFactory:
                     res = self.trigger_it(c.data, res)
 
                     frees.append(c)
-                    res.pop('data', None)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
                     responses.append(res)
 
                 for c, errno, errmsg in err_list:
@@ -103,7 +105,8 @@ class CurlFactory:
                         res['errno'] = errno
                         res['errmsg'] = errmsg
                         res = self.trigger_it(c.data, res)
-                        res.pop('data', None)
+                        if self.info.get('mode') == 'celery':
+                            res.pop('data', None)
                         responses.append(res)
                     else:
                         msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
@@ -115,7 +118,8 @@ class CurlFactory:
                             if response:
                                 res = get_result(c)
                                 res = self.trigger_it(c.data, res)
-                                res.pop('data', None)
+                                if self.info.get('mode') == 'celery':
+                                    res.pop('data', None)
                                 responses.append(res)
                             else:
                                 res = {
@@ -189,7 +193,8 @@ class CurlFactory:
                     res = self.trigger_it(c.data, res)
 
                     frees.append(c)
-                    res.pop('data', None)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
                     responses.append(res)
 
                 for c, errno, errmsg in err_list:
@@ -201,7 +206,8 @@ class CurlFactory:
                         res['errno'] = errno
                         res['errmsg'] = errmsg
                         res = self.trigger_it(c.data, res)
-                        res.pop('data', None)
+                        if self.info.get('mode') == 'celery':
+                            res.pop('data', None)
                         responses.append(res)
                     else:
                         msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
@@ -215,7 +221,8 @@ class CurlFactory:
                                 await sleep(0.1)
                                 res = get_result(c)
                                 res = self.trigger_it(c.data, res)
-                                res.pop('data', None)
+                                if self.info.get('mode') == 'celery':
+                                    res.pop('data', None)
                                 responses.append(res)
                             else:
                                 res = {
@@ -308,6 +315,7 @@ class CurlFactory:
                                 response = resp
 
                 except Exception as e:
+                    trace_table(e)
                     self.log.critical('trigger failed: '+str(e)+' type: '+str(type(e)))
         return response
 

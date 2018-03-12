@@ -68,6 +68,10 @@ class NetBoy:
         self.info = info
         return self
 
+    def use_final(self, final):
+        self.info['final'] = final
+        return self
+
     def use_mode(self, mode):
         self.info['mode'] = mode
         spider = self.info.get('spider')
@@ -82,9 +86,11 @@ class NetBoy:
             if spider == 'pycurl':
                 self.info['celery_worker'] = 'netboy.celery.tasks.coroutine_worker'
                 self.info['worker'] = 'netboy.celery.tasks.coroutine_worker_do_crawl'
+                self.info['final_callback'] = 'netboy.celery.tasks.final_callback'
             elif spider == 'chrome':
                 self.info['celery_worker'] = 'netboy.celery.tasks.thread_worker'
                 self.info['worker'] = 'netboy.celery.tasks.thread_worker_do_crawl'
+                self.info['final_callback'] = 'netboy.celery.tasks.final_callback'
         elif mode == 'coroutine':
             if spider == 'pycurl':
                 self.info['worker'] = 'netboy.asyncio_pycurl.async_handler.curl_handler'
@@ -106,6 +112,16 @@ class NetBoy:
 
     def use_logger(self, logger):
         self.info['log'] = logger
+        return self
+
+    def use_chrome(self, chrome):
+        self.info['chrome'] = chrome
+        self.use_spider('chrome')
+        return self
+
+    def use_window(self, window):
+        self.info['window_size'] = window
+        self.use_spider('chrome')
         return self
 
     def run(self, data):

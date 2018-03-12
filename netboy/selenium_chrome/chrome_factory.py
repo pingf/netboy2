@@ -130,8 +130,9 @@ class ChromeFactory:
                         "time": response_time
                     }
                 response = self.trigger_it(d, response)
-                response.pop('data', None)
-                response.pop('screen', None)
+                if self.info.get('mode') == 'celery':
+                    response.pop('data', None)
+                    response.pop('screen', None)
                 responses.append(response)
             self.anaylse_it(responses)
         finally:
@@ -229,8 +230,9 @@ class ChromeFactory:
                         "time": response_time
                     }
                 response = self.trigger_it(d, response)
-                response.pop('data', None)
-                response.pop('screen', None)
+                if self.info.get('mode') == 'celery':
+                    response.pop('data', None)
+                    response.pop('screen', None)
                 responses.append(response)
             self.anaylse_it(responses)
         finally:
