@@ -40,10 +40,10 @@ def filter_content_result(c, json_response=False):
         curl_filter = ['data', 'charset', 'title']
     if 'data' in curl_filter or 'charset' in curl_filter or 'title' in curl_filter:
         body = c.databuf.getvalue()
-        charset = None
 
-        if c.charset:
-            data = body.decode(c.charset, 'ignore')
+        charset = c.data.get('charset')
+        if charset:
+            data = body.decode(charset, 'ignore')
         else:
             if len(body) == 0:
                 data = ''
@@ -54,7 +54,10 @@ def filter_content_result(c, json_response=False):
                 if match:
                     charset = match.group(1)
                 charset = safe_cn_charset(charset)
-                data = body.decode(charset, 'ignore')
+                try:
+                    data = body.decode(charset)
+                except Exception as exc:
+                    data, charset = beautify(body)
 
             else:
                 utf8_data = body.decode('utf8', 'ignore')
@@ -62,7 +65,10 @@ def filter_content_result(c, json_response=False):
                 if match:
                     charset = match.group(1)
                     charset = safe_cn_charset(charset)
-                    data = body.decode(charset, 'ignore')
+                    try:
+                        data = body.decode(charset)
+                    except Exception as exc:
+                        data, charset = beautify(body)
                 else:
                     data, charset = beautify(body)
 
@@ -102,6 +108,7 @@ def filter_header_result(c):
 def filter_curl_result(c):
     filter_map = {
         'url': lambda curl: curl.data.get('url'),
+        'charset': lambda curl: curl.data.get('charset'),
         'effect': lambda curl: curl.getinfo(pycurl.EFFECTIVE_URL),
         'ip': lambda curl: curl.getinfo(pycurl.PRIMARY_IP),
         'port': lambda curl: curl.getinfo(pycurl.PRIMARY_PORT),

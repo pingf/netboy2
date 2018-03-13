@@ -9,22 +9,15 @@ from netboy.util.loader import load
 DEFAULT_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm; Baiduspider/2.0; +http://www.baidu.com/search/spider.html) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80() Safari/537.36'
 
 
-def setup_curl(c, d):
+def setup_curl(c):
+    d = c.data
     databuf = BytesIO()
     headers = {'count': 0, 'content': [{}]}
     set_cookies = []
 
     c.databuf = databuf
     c.headers = headers
-    if d.get('charset'):
-        c.charset = d.get('charset')
-    else:
-        c.charset = None
 
-    if d.get('cn'):
-        c.cn = True
-    else:
-        c.cn = None
 
     def header_function(header_line):
         match = re.match("^Set-Cookie: (.*)$", header_line.decode('utf8', 'ignore'))

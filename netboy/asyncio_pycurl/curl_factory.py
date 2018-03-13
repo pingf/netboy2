@@ -67,9 +67,9 @@ class CurlFactory:
                     if data.get('skip'):
                         self.num_urls -= 1
                         continue
-                setup_curl(c, data)
-                self.m.add_handle(c)
                 c.data = data
+                setup_curl(c)
+                self.m.add_handle(c)
 
 
             # Run the internal curl state machine for the multi stack
