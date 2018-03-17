@@ -8,8 +8,8 @@ from netboy.asyncio_pycurl.curl_setup import setup_curl
 def work(data, logger='worker'):
     log = logging.getLogger(logger)
     curl = pycurl.Curl()
-    setup_curl(curl, data)
     curl.data = data
+    setup_curl(curl)
 
     try:
         curl.perform()
