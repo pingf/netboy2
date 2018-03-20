@@ -40,6 +40,9 @@ class ChromeFactory:
         self.driver = None
 
     async def async_run(self):
+        load_timeout = self.info.get('timeout', 15)
+        script_timeout = self.info.get('script_timeout', 15)
+        implicit_wait = self.info.get('wait', 5)
         if not self.driver:
             chrome_bin = self.info.get('chrome', '/opt/google/chrome-beta/chrome')
             window_size = self.info.get('window_size', '1920x1080')
@@ -67,9 +70,6 @@ class ChromeFactory:
                 options.add_argument('--proxy-server=%s://%s:%d' % (proxy_type, proxy, proxy_port))
 
             self.driver = webdriver.Chrome(chrome_options=options)
-            load_timeout = self.info.get('timeout', 15)
-            script_timeout = self.info.get('script_timeout', 15)
-            implicit_wait = self.info.get('wait', 5)
             self.driver.implicitly_wait(implicit_wait)
             self.driver.set_page_load_timeout(load_timeout)
             self.driver.set_script_timeout(script_timeout)
@@ -84,6 +84,9 @@ class ChromeFactory:
                 if isinstance(ret_data, dict):
                     d = ret_data
                     if d.get('skip'):
+                        continue
+                    if d.get('cover'):
+                        responses.append(d)
                         continue
 
                 start = time.time()
@@ -141,6 +144,9 @@ class ChromeFactory:
         return responses
 
     def run(self):
+        load_timeout = self.info.get('timeout', 15)
+        script_timeout = self.info.get('script_timeout', 15)
+        implicit_wait = self.info.get('wait', 5)
         if not self.driver:
             chrome_bin = self.info.get('chrome', '/opt/google/chrome-beta/chrome')
             window_size = self.info.get('window_size', '1920x1080')
@@ -167,9 +173,6 @@ class ChromeFactory:
                 options.add_argument('--proxy-server=%s://%s:%d' % (proxy_type, proxy, proxy_port))
 
             self.driver = webdriver.Chrome(chrome_options=options)
-            load_timeout = self.info.get('timeout', 15)
-            script_timeout = self.info.get('script_timeout', 15)
-            implicit_wait = self.info.get('wait', 5)
             self.driver.implicitly_wait(implicit_wait)
             self.driver.set_page_load_timeout(load_timeout)
             self.driver.set_script_timeout(script_timeout)
@@ -184,6 +187,9 @@ class ChromeFactory:
                 if isinstance(ret_data, dict):
                     d = ret_data
                     if d.get('skip'):
+                        continue
+                    if d.get('cover'):
+                        responses.append(d)
                         continue
                 start = time.time()
                 url = d.get('url')

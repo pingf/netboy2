@@ -67,6 +67,9 @@ class CurlFactory:
                     if data.get('skip'):
                         self.num_urls -= 1
                         continue
+                    if data.get('cover'):
+                        responses.append(data)
+                        continue
                 c.data = data
                 setup_curl(c)
                 self.m.add_handle(c)
@@ -172,6 +175,9 @@ class CurlFactory:
                     data = ret_data
                     if data.get('skip'):
                         self.num_urls -= 1
+                        continue
+                    if data.get('cover'):
+                        responses.append(data)
                         continue
                 c.data = data
                 setup_curl(c)
