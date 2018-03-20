@@ -3,6 +3,7 @@ import re
 
 import pycurl
 from bs4 import UnicodeDammit
+# from http.cookiejar import Cookie
 
 
 def safe_cn_charset(charset):
@@ -105,6 +106,31 @@ def filter_header_result(c):
     return result
 
 
+def parse_cookie(curl):
+    cookies = curl.getinfo(pycurl.INFO_COOKIELIST)
+    result = []
+    for item in cookies:
+        domain, domain_specified, path, path_specified, expiry, \
+        name, value = item.split("\t")
+        if domain.startswith('#HttpOnly_'):
+            http_only = True
+            domain = domain[len('#HttpOnly_'):]
+        else:
+            http_only = False
+        result.append({
+            'domain': domain,
+            'domainSpecified': domain_specified,
+            'path': path,
+            'pathSpecified': path_specified,
+            'expiry': expiry,
+            'name': name,
+            'value': value,
+            'httpOnly': http_only,
+            'secure': False #only to false here
+        })
+    return result
+
+
 def filter_curl_result(c):
     filter_map = {
         'url': lambda curl: curl.data.get('url'),
@@ -138,7 +164,7 @@ def filter_curl_result(c):
         'num_connects': lambda curl: curl.getinfo(pycurl.NUM_CONNECTS),
         'content_length_download': lambda curl: curl.getinfo(pycurl.CONTENT_LENGTH_DOWNLOAD),
         # 'cookielist': lambda curl: curl.getinfo(pycurl.INFO_COOKIELIST),
-        'cookie': lambda curl: curl.getinfo(pycurl.INFO_COOKIELIST),
+        'cookie': lambda curl: parse_cookie(curl),  # curl.getinfo(pycurl.INFO_COOKIELIST),
 
         'httpauth_avail': lambda curl: curl.getinfo(pycurl.HTTPAUTH_AVAIL),
         'proxyauth_avail': lambda curl: curl.getinfo(pycurl.PROXYAUTH_AVAIL),
