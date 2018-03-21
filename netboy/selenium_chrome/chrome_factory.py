@@ -79,14 +79,17 @@ class ChromeFactory:
             crawl_func = exit_after(load_timeout)(crawl)
             for d in self.updated:
 
-                ret_data = self.prepare_it(d)
+                prepare_resp = self.prepare_it(d)
 
-                if isinstance(ret_data, dict):
-                    d = ret_data
-                    if d.get('skip'):
+                if isinstance(prepare_resp, dict):
+                    if prepare_resp.get('skip'):
                         continue
-                    if d.get('cover'):
-                        responses.append(d)
+                    if prepare_resp.get('cover'):
+                        response = self.trigger_it(d, prepare_resp)
+                        if self.info.get('mode') == 'celery':
+                            response.pop('data', None)
+                            response.pop('screen', None)
+                        responses.append(response)
                         continue
 
                 start = time.time()
@@ -182,14 +185,17 @@ class ChromeFactory:
             crawl_func = exit_after(load_timeout)(crawl)
             for d in self.updated:
 
-                ret_data = self.prepare_it(d)
+                prepare_resp = self.prepare_it(d)
 
-                if isinstance(ret_data, dict):
-                    d = ret_data
+                if isinstance(prepare_resp, dict):
                     if d.get('skip'):
                         continue
                     if d.get('cover'):
-                        responses.append(d)
+                        response = self.trigger_it(d, prepare_resp)
+                        if self.info.get('mode') == 'celery':
+                            response.pop('data', None)
+                            response.pop('screen', None)
+                        responses.append(response)
                         continue
                 start = time.time()
                 url = d.get('url')

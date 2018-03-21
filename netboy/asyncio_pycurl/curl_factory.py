@@ -12,7 +12,6 @@ from netboy.asyncio_pycurl.curl_result import get_result
 from netboy.asyncio_pycurl.curl_setup import setup_curl
 from netboy.celery.app import App
 
-
 from netboy.util.data_info import update_data_from_info
 
 
@@ -33,6 +32,7 @@ class CurlFactory:
             self.queue.append(e)
 
         self.num_urls = len(self.queue)
+        self.num_processed = 0
         self.num_conn = min(info.get('num_conn', 20), self.num_urls)
 
     def allocate(self):
@@ -52,28 +52,39 @@ class CurlFactory:
 
         frees = self.freelist()
 
-        num_processed = 0
-        while num_processed < self.num_urls:
-            # If there is an url to process and a free curl object, add to multi stack
+        def setup_loop():
             while self.queue and frees:
                 data = self.queue.pop(0)
                 url = data['url']
                 c = frees.pop()
 
-                ret_data = self.prepare_it(data)
+                prepare_resp = self.prepare_it(data)
 
-                if isinstance(ret_data, dict):
-                    data = ret_data
-                    if data.get('skip'):
+                if isinstance(prepare_resp, dict):
+                    if prepare_resp.get('skip'):
                         self.num_urls -= 1
-                        continue
-                    if data.get('cover'):
-                        responses.append(data)
-                        continue
+                        return data, prepare_resp
+                    if prepare_resp.get('cover'):
+                        self.num_processed += 1
+                        return data, prepare_resp
                 c.data = data
                 setup_curl(c)
                 self.m.add_handle(c)
+            return None, None
 
+        while self.num_processed < self.num_urls:
+            p, r = setup_loop()
+            if r and isinstance(r, dict):
+                if r.get('skip'):
+                    continue
+                if r.get('cache'):
+                    res = self.trigger_it(p, r)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
+                    responses.append(res)
+                    continue
+
+            # res = self.trigger_it(, res)
 
             # Run the internal curl state machine for the multi stack
             while 1:
@@ -82,6 +93,7 @@ class CurlFactory:
                     break
             # Check for curl objects which have terminated, and add them to the freelist
             while 1:
+                res = None
                 num_q, ok_list, err_list = self.m.info_read()
                 for c in ok_list:
                     self.m.remove_handle(c)
@@ -90,13 +102,11 @@ class CurlFactory:
                         c.getinfo(pycurl.HTTP_CODE))
                     self.log.info(msg)
                     res = get_result(c)
-
                     res = self.trigger_it(c.data, res)
-
-                    frees.append(c)
                     if self.info.get('mode') == 'celery':
                         res.pop('data', None)
                     responses.append(res)
+                    frees.append(c)
 
                 for c, errno, errmsg in err_list:
                     if errno == 28:
@@ -108,10 +118,6 @@ class CurlFactory:
                         res['errno'] = errno
                         res['errmsg'] = errmsg
                         res['url'] = c.data.get('url')
-                        res = self.trigger_it(c.data, res)
-                        if self.info.get('mode') == 'celery':
-                            res.pop('data', None)
-                        responses.append(res)
                     else:
                         msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
                             errmsg)
@@ -121,10 +127,6 @@ class CurlFactory:
                             response = curl_work(c.data, c.data.get('log', 'netboy'))
                             if response:
                                 res = get_result(c)
-                                res = self.trigger_it(c.data, res)
-                                if self.info.get('mode') == 'celery':
-                                    res.pop('data', None)
-                                responses.append(res)
                             else:
                                 res = {
                                     'url': c.data.get('url'),
@@ -133,7 +135,6 @@ class CurlFactory:
                                     'errno': errno,
                                     'errmsg': errmsg
                                 }
-                                responses.append(res)
                         else:
                             res = {
                                 'url': c.data.get('url'),
@@ -142,11 +143,13 @@ class CurlFactory:
                                 'errno': errno,
                                 'errmsg': errmsg
                             }
-                            responses.append(res)
                     res = self.trigger_it(c.data, res)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
+                    responses.append(res)
                     self.m.remove_handle(c)
                     frees.append(c)
-                num_processed = num_processed + len(ok_list) + len(err_list)
+                self.num_processed = self.num_processed + len(ok_list) + len(err_list)
                 if num_q == 0:
                     break
             # Currently no more I/O is pending, could do something in the meantime
@@ -161,27 +164,37 @@ class CurlFactory:
 
         frees = self.freelist()
 
-        num_processed = 0
-        while num_processed < self.num_urls:
-            # If there is an url to process and a free curl object, add to multi stack
+        def setup_loop():
             while self.queue and frees:
                 data = self.queue.pop(0)
                 url = data['url']
                 c = frees.pop()
 
-                ret_data = self.prepare_it(data)
+                prepare_resp = self.prepare_it(data)
 
-                if isinstance(ret_data, dict):
-                    data = ret_data
-                    if data.get('skip'):
+                if isinstance(prepare_resp, dict):
+                    if prepare_resp.get('skip'):
                         self.num_urls -= 1
-                        continue
-                    if data.get('cover'):
-                        responses.append(data)
-                        continue
+                        return data, prepare_resp
+                    if prepare_resp.get('cover'):
+                        self.num_processed += 1
+                        return data, prepare_resp
                 c.data = data
                 setup_curl(c)
                 self.m.add_handle(c)
+            return None, None
+
+        while self.num_processed < self.num_urls:
+            p, r = setup_loop()
+            if r and isinstance(r, dict):
+                if r.get('skip'):
+                    continue
+                if r.get('cache'):
+                    res = self.trigger_it(p, r)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
+                    responses.append(res)
+                    continue
 
             # Run the internal curl state machine for the multi stack
             while 1:
@@ -190,6 +203,7 @@ class CurlFactory:
                     break
             # Check for curl objects which have terminated, and add them to the freelist
             while 1:
+                res = None
                 num_q, ok_list, err_list = self.m.info_read()
                 for c in ok_list:
                     self.m.remove_handle(c)
@@ -200,11 +214,10 @@ class CurlFactory:
                     res = get_result(c)
 
                     res = self.trigger_it(c.data, res)
-
-                    frees.append(c)
                     if self.info.get('mode') == 'celery':
                         res.pop('data', None)
                     responses.append(res)
+                    frees.append(c)
 
                 for c, errno, errmsg in err_list:
                     if errno in [28]:
@@ -216,10 +229,6 @@ class CurlFactory:
                         res['errno'] = errno
                         res['errmsg'] = errmsg
                         res['url'] = c.data.get('url')
-                        res = self.trigger_it(c.data, res)
-                        if self.info.get('mode') == 'celery':
-                            res.pop('data', None)
-                        responses.append(res)
                     else:
                         msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
                             errmsg)
@@ -231,10 +240,6 @@ class CurlFactory:
                             if response:
                                 await sleep(0.1)
                                 res = get_result(c)
-                                res = self.trigger_it(c.data, res)
-                                if self.info.get('mode') == 'celery':
-                                    res.pop('data', None)
-                                responses.append(res)
                             else:
                                 res = {
                                     'url': c.data.get('url'),
@@ -243,7 +248,6 @@ class CurlFactory:
                                     'errno': errno,
                                     'errmsg': errmsg
                                 }
-                                responses.append(res)
                         else:
                             res = {
                                 'url': c.data.get('url'),
@@ -252,11 +256,14 @@ class CurlFactory:
                                 'errno': errno,
                                 'errmsg': errmsg
                             }
-                            responses.append(res)
+
                     res = self.trigger_it(c.data, res)
+                    if self.info.get('mode') == 'celery':
+                        res.pop('data', None)
+                    responses.append(res)
                     self.m.remove_handle(c)
                     frees.append(c)
-                num_processed = num_processed + len(ok_list) + len(err_list)
+                self.num_processed = self.num_processed + len(ok_list) + len(err_list)
                 if num_q == 0:
                     break
             # Currently no more I/O is pending, could do something in the meantime
@@ -277,22 +284,22 @@ class CurlFactory:
             for analyser in analysers:
                 payload['analyser'] = analyser
                 sig = {
-                    #here the payload is the info
+                    # here the payload is the info
                     'payload': payload,
                     'response': responses,
                 }
                 try:
                     if payload.get('mode', 'celery') == 'celery':
-                       App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
-                                      queue=self.info.get('queue', 'worker'),
-                                      routing_key=self.info.get('queue', 'worker'))
+                        App().app.send_task('netboy.celery.tasks.analyser_task', kwargs=sig, countdown=1,
+                                            queue=self.info.get('queue', 'worker'),
+                                            routing_key=self.info.get('queue', 'worker'))
                     else:
                         analyser_func = load(analyser) if isinstance(analyser, str) else load(analyser.get('analyser'))
                         resp = analyser_func(responses)
                         if resp is not None:
                             responses = resp
                 except Exception as e:
-                    self.log.critical('analyser failed: '+str(e)+' type: '+str(type(e)))
+                    self.log.critical('analyser failed: ' + str(e) + ' type: ' + str(type(e)))
         return responses
 
     def trigger_it(self, payload, response):
@@ -318,8 +325,8 @@ class CurlFactory:
                 try:
                     if trigger.get('mode', 'sync') == 'celery' and payload.get('mode') == 'celery':
                         resp = App().app.send_task('netboy.celery.tasks.trigger_task', kwargs=sig, countdown=1,
-                                      queue=payload.get('queue'),
-                                      routing_key=payload.get('queue'))
+                                                   queue=payload.get('queue'),
+                                                   routing_key=payload.get('queue'))
                     else:
                         trigger_func = load(trigger) if isinstance(trigger, str) else load(trigger.get('trigger'))
                         resp = trigger_func(payload, response)
@@ -329,7 +336,7 @@ class CurlFactory:
 
                 except Exception as e:
                     trace_table(e)
-                    self.log.critical('trigger failed: '+str(e)+' type: '+str(type(e)))
+                    self.log.critical('trigger failed: ' + str(e) + ' type: ' + str(type(e)))
         return response
 
     def prepare_it(self, data):
@@ -345,5 +352,5 @@ class CurlFactory:
                             data = resp
 
                 except Exception as e:
-                    self.log.critical('prepare failed: '+str(e)+' type: '+str(type(e)))
+                    self.log.critical('prepare failed: ' + str(e) + ' type: ' + str(type(e)))
         return data
