@@ -188,15 +188,16 @@ class ChromeFactory:
                 prepare_resp = self.prepare_it(d)
 
                 if isinstance(prepare_resp, dict):
-                    if d.get('skip'):
+                    if prepare_resp.get('skip'):
                         continue
-                    if d.get('cover'):
+                    if prepare_resp.get('cover'):
                         response = self.trigger_it(d, prepare_resp)
                         if self.info.get('mode') == 'celery':
                             response.pop('data', None)
                             response.pop('screen', None)
                         responses.append(response)
                         continue
+
                 start = time.time()
                 url = d.get('url')
                 try:

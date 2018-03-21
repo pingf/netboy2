@@ -77,7 +77,7 @@ class CurlFactory:
             if r and isinstance(r, dict):
                 if r.get('skip'):
                     continue
-                if r.get('cache'):
+                if r.get('cover'):
                     res = self.trigger_it(p, r)
                     if self.info.get('mode') == 'celery':
                         res.pop('data', None)
@@ -189,7 +189,7 @@ class CurlFactory:
             if r and isinstance(r, dict):
                 if r.get('skip'):
                     continue
-                if r.get('cache'):
+                if r.get('cover'):
                     res = self.trigger_it(p, r)
                     if self.info.get('mode') == 'celery':
                         res.pop('data', None)
