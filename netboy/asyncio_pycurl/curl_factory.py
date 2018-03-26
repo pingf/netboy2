@@ -337,6 +337,10 @@ class CurlFactory:
                 except Exception as e:
                     trace_table(e)
                     self.log.critical('trigger failed: ' + str(e) + ' type: ' + str(type(e)))
+
+            if isinstance(response, dict):
+                if response.get('update'):
+                    response['update'] = False
         return response
 
     def prepare_it(self, data):
@@ -353,4 +357,7 @@ class CurlFactory:
 
                 except Exception as e:
                     self.log.critical('prepare failed: ' + str(e) + ' type: ' + str(type(e)))
+            if isinstance(data, dict):
+                if data.get('update'):
+                    data['update'] = False
         return data

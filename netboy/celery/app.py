@@ -38,8 +38,8 @@ class Singleton(type):
 
 
 class App(metaclass=Singleton):
-    def __init__(self, mode='normal'):
-        self.app = Celery('netboy')
+    def __init__(self, main='netboy', config='celeryconfig'):
+        self.app = Celery(main)
         self.app.config_from_object(BasicConfig())
-        self.app.config_from_object('celeryconfig')
+        self.app.config_from_object(config)
 

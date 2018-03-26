@@ -293,6 +293,10 @@ class ChromeFactory:
 
                 except Exception as e:
                     self.log.critical('prepare failed: ' + str(e) + ' type: ' + str(type(e)))
+
+            if isinstance(data, dict):
+                if data.get('update'):
+                    data['update'] = False
         return data
 
     def trigger_it(self, payload, response):
@@ -325,6 +329,10 @@ class ChromeFactory:
                                 response = resp
                 except Exception as e:
                     self.log.critical('trigger failed: ' + str(e))
+
+            if isinstance(response, dict):
+                if response.get('update'):
+                    response['update'] = False
         return response
 
 
