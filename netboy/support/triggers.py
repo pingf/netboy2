@@ -1,4 +1,4 @@
-from netboy.asyncio_pycurl.curl_one import work as curl_work
+from netboy.multi_pycurl.curl_one import work as curl_work
 
 
 def trig_it(payload, response):
@@ -9,13 +9,14 @@ def trig_it(payload, response):
 def post_it(payload, response):
     trigger = payload.get('trigger')
     url = trigger.get('url')
-    payload = {
-        'url': url,
-        'method': 'post',
-        'postfields': {
-            'payload': payload,
-            'response': response
+    if url:
+        payload = {
+            'url': url,
+            'method': 'post',
+            'postfields': {
+                'payload': payload,
+                'response': response
+            }
         }
-    }
-    resp = curl_work(payload, logger='netboy')
+        resp = curl_work(payload, logger='netboy')
     # return resp

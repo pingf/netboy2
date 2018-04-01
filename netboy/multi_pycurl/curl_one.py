@@ -1,8 +1,8 @@
 import logging
 import pycurl
 
-from netboy.asyncio_pycurl.curl_result import get_result
-from netboy.asyncio_pycurl.curl_setup import setup_curl
+from netboy.multi_pycurl.curl_result import get_result
+from netboy.multi_pycurl.curl_setup import setup_curl
 
 
 def work(data, logger='worker'):

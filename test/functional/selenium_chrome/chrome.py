@@ -57,7 +57,7 @@ if __name__ == '__main__':
         'proxy': '127.0.0.1',
         'proxyport': 1082,
         'celery_worker': 'netboy.celery.tasks.thread_worker',
-        'worker': 'netboy.celery.tasks.thread_worker_do_crawl',
+        'worker': 'netboy.celery.tasks.chrome_worker_do_crawl',
         'celery_max_workers': 4,
         'celery_chunk_size': 2,
         'chunk_size': 2,

@@ -1,7 +1,7 @@
 from copy import copy
 from worker.worker import Worker
 
-from netboy.asyncio_pycurl.curl_one import work as curl_work
+from netboy.multi_pycurl.curl_one import work as curl_work
 
 
 class NetBoy:
@@ -84,21 +84,21 @@ class NetBoy:
         mode = self.info.get('mode', 'thread')
         if mode == 'celery':
             if spider == 'pycurl':
-                self.info['celery_worker'] = 'netboy.celery.tasks.coroutine_worker'
-                self.info['worker'] = 'netboy.celery.tasks.coroutine_worker_do_crawl'
+                self.info['celery_worker'] = 'netboy.celery.tasks.pycurl_worker'
+                self.info['worker'] = 'netboy.celery.tasks.multicurl_worker_do_crawl'
                 self.info['final_callback'] = 'netboy.celery.tasks.final_callback'
             elif spider == 'chrome':
                 self.info['celery_worker'] = 'netboy.celery.tasks.thread_worker'
-                self.info['worker'] = 'netboy.celery.tasks.thread_worker_do_crawl'
+                self.info['worker'] = 'netboy.celery.tasks.chrome_worker_do_crawl'
                 self.info['final_callback'] = 'netboy.celery.tasks.final_callback'
-        elif mode == 'coroutine':
-            if spider == 'pycurl':
-                self.info['worker'] = 'netboy.asyncio_pycurl.async_handler.curl_handler'
-            elif spider == 'chrome':
-                self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.async_chrome_driver_handler'
+        # elif mode == 'coroutine':
+        #     if spider == 'pycurl':
+        #         self.info['worker'] = 'netboy.multi_pycurl.multicurl_handler.curl_handler'
+        #     elif spider == 'chrome':
+        #         self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
         else:
             if spider == 'pycurl':
-                self.info['worker'] = 'netboy.asyncio_pycurl.async_handler.sync_curl_handler'
+                self.info['worker'] = 'netboy.multi_pycurl.multicurl_handler.curl_handler'
             elif spider == 'chrome':
                 self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
         return self

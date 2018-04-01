@@ -5,11 +5,11 @@ from logcc.util.table import trace_table
 from netboy.util.loader import load
 import pycurl
 
-from asyncio import sleep
+# from asyncio import sleep
 
-from netboy.asyncio_pycurl.curl_one import work as curl_work
-from netboy.asyncio_pycurl.curl_result import get_result
-from netboy.asyncio_pycurl.curl_setup import setup_curl
+from netboy.multi_pycurl.curl_one import work as curl_work
+from netboy.multi_pycurl.curl_result import get_result
+from netboy.multi_pycurl.curl_setup import setup_curl
 from netboy.celery.app import App
 
 from netboy.util.data_info import update_data_from_info
@@ -47,7 +47,7 @@ class CurlFactory:
     def freelist(self):
         return self.m.handles[:]
 
-    def sync_run(self):
+    def run(self):
         responses = []
 
         frees = self.freelist()
@@ -109,7 +109,7 @@ class CurlFactory:
                     frees.append(c)
 
                 for c, errno, errmsg in err_list:
-                    if errno == 28:
+                    if errno == 28 and errmsg.startswith('O'):
                         msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
                             errmsg)
                         self.log.warning(msg)
@@ -159,120 +159,120 @@ class CurlFactory:
         self.anaylse_it(responses)
         return responses
 
-    async def run(self):
-        responses = []
-
-        frees = self.freelist()
-
-        def setup_loop():
-            while self.queue and frees:
-                data = self.queue.pop(0)
-                url = data['url']
-                c = frees.pop()
-
-                prepare_resp = self.prepare_it(data)
-
-                if isinstance(prepare_resp, dict):
-                    if prepare_resp.get('skip'):
-                        self.num_urls -= 1
-                        return data, prepare_resp
-                    if prepare_resp.get('cover'):
-                        self.num_processed += 1
-                        return data, prepare_resp
-                c.data = data
-                setup_curl(c)
-                self.m.add_handle(c)
-            return None, None
-
-        while self.num_processed < self.num_urls:
-            p, r = setup_loop()
-            if r and isinstance(r, dict):
-                if r.get('skip'):
-                    continue
-                if r.get('cover'):
-                    res = self.trigger_it(p, r)
-                    if self.info.get('mode') == 'celery':
-                        res.pop('data', None)
-                    responses.append(res)
-                    continue
-
-            # Run the internal curl state machine for the multi stack
-            while 1:
-                ret, num_handles = self.m.perform()
-                if ret != pycurl.E_CALL_MULTI_PERFORM:
-                    break
-            # Check for curl objects which have terminated, and add them to the freelist
-            while 1:
-                res = None
-                num_q, ok_list, err_list = self.m.info_read()
-                for c in ok_list:
-                    self.m.remove_handle(c)
-                    msg = "success! url: " + str(c.data.get('url')) + ' effect: ' + str(
-                        c.getinfo(pycurl.EFFECTIVE_URL)) + ' code: ' + str(
-                        c.getinfo(pycurl.HTTP_CODE))
-                    self.log.info(msg)
-                    res = get_result(c)
-
-                    res = self.trigger_it(c.data, res)
-                    if self.info.get('mode') == 'celery':
-                        res.pop('data', None)
-                    responses.append(res)
-                    frees.append(c)
-
-                for c, errno, errmsg in err_list:
-                    if errno in [28]:
-                        msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
-                            errmsg)
-                        self.log.warning(msg)
-                        res = get_result(c)
-                        res['state'] = 'error'
-                        res['errno'] = errno
-                        res['errmsg'] = errmsg
-                        res['url'] = c.data.get('url')
-                    else:
-                        msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
-                            errmsg)
-                        self.log.warning(msg)
-
-                        if c.data.get('retry'):
-                            await sleep(0.2)
-                            response = curl_work(c.data, c.data.get('log', 'netboy'))
-                            if response:
-                                await sleep(0.1)
-                                res = get_result(c)
-                            else:
-                                res = {
-                                    'url': c.data.get('url'),
-                                    'state': 'error',
-                                    'spider': 'pycurl',
-                                    'errno': errno,
-                                    'errmsg': errmsg
-                                }
-                        else:
-                            res = {
-                                'url': c.data.get('url'),
-                                'state': 'error',
-                                'spider': 'pycurl',
-                                'errno': errno,
-                                'errmsg': errmsg
-                            }
-
-                    res = self.trigger_it(c.data, res)
-                    if self.info.get('mode') == 'celery':
-                        res.pop('data', None)
-                    responses.append(res)
-                    self.m.remove_handle(c)
-                    frees.append(c)
-                self.num_processed = self.num_processed + len(ok_list) + len(err_list)
-                if num_q == 0:
-                    break
-            # Currently no more I/O is pending, could do something in the meantime
-            # (display a progress bar, etc.).
-            # We just call select() to sleep until some more data is available.
-            self.m.select(0.2)
-            await sleep(0.1)
-        self.anaylse_it(responses)
-        return responses
+    # async def run(self):
+    #     responses = []
+    #
+    #     frees = self.freelist()
+    #
+    #     def setup_loop():
+    #         while self.queue and frees:
+    #             data = self.queue.pop(0)
+    #             url = data['url']
+    #             c = frees.pop()
+    #
+    #             prepare_resp = self.prepare_it(data)
+    #
+    #             if isinstance(prepare_resp, dict):
+    #                 if prepare_resp.get('skip'):
+    #                     self.num_urls -= 1
+    #                     return data, prepare_resp
+    #                 if prepare_resp.get('cover'):
+    #                     self.num_processed += 1
+    #                     return data, prepare_resp
+    #             c.data = data
+    #             setup_curl(c)
+    #             self.m.add_handle(c)
+    #         return None, None
+    #
+    #     while self.num_processed < self.num_urls:
+    #         p, r = setup_loop()
+    #         if r and isinstance(r, dict):
+    #             if r.get('skip'):
+    #                 continue
+    #             if r.get('cover'):
+    #                 res = self.trigger_it(p, r)
+    #                 if self.info.get('mode') == 'celery':
+    #                     res.pop('data', None)
+    #                 responses.append(res)
+    #                 continue
+    #
+    #         # Run the internal curl state machine for the multi stack
+    #         while 1:
+    #             ret, num_handles = self.m.perform()
+    #             if ret != pycurl.E_CALL_MULTI_PERFORM:
+    #                 break
+    #         # Check for curl objects which have terminated, and add them to the freelist
+    #         while 1:
+    #             res = None
+    #             num_q, ok_list, err_list = self.m.info_read()
+    #             for c in ok_list:
+    #                 self.m.remove_handle(c)
+    #                 msg = "success! url: " + str(c.data.get('url')) + ' effect: ' + str(
+    #                     c.getinfo(pycurl.EFFECTIVE_URL)) + ' code: ' + str(
+    #                     c.getinfo(pycurl.HTTP_CODE))
+    #                 self.log.info(msg)
+    #                 res = get_result(c)
+    #
+    #                 res = self.trigger_it(c.data, res)
+    #                 if self.info.get('mode') == 'celery':
+    #                     res.pop('data', None)
+    #                 responses.append(res)
+    #                 frees.append(c)
+    #
+    #             for c, errno, errmsg in err_list:
+    #                 if errno in [28]:
+    #                     msg = "28! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
+    #                         errmsg)
+    #                     self.log.warning(msg)
+    #                     res = get_result(c)
+    #                     res['state'] = 'error'
+    #                     res['errno'] = errno
+    #                     res['errmsg'] = errmsg
+    #                     res['url'] = c.data.get('url')
+    #                 else:
+    #                     msg = "failed! url: " + str(c.data.get('url')) + ' errno: ' + str(errno) + ' errmsg: ' + str(
+    #                         errmsg)
+    #                     self.log.warning(msg)
+    #
+    #                     if c.data.get('retry'):
+    #                         await sleep(0.2)
+    #                         response = curl_work(c.data, c.data.get('log', 'netboy'))
+    #                         if response:
+    #                             await sleep(0.1)
+    #                             res = get_result(c)
+    #                         else:
+    #                             res = {
+    #                                 'url': c.data.get('url'),
+    #                                 'state': 'error',
+    #                                 'spider': 'pycurl',
+    #                                 'errno': errno,
+    #                                 'errmsg': errmsg
+    #                             }
+    #                     else:
+    #                         res = {
+    #                             'url': c.data.get('url'),
+    #                             'state': 'error',
+    #                             'spider': 'pycurl',
+    #                             'errno': errno,
+    #                             'errmsg': errmsg
+    #                         }
+    #
+    #                 res = self.trigger_it(c.data, res)
+    #                 if self.info.get('mode') == 'celery':
+    #                     res.pop('data', None)
+    #                 responses.append(res)
+    #                 self.m.remove_handle(c)
+    #                 frees.append(c)
+    #             self.num_processed = self.num_processed + len(ok_list) + len(err_list)
+    #             if num_q == 0:
+    #                 break
+    #         # Currently no more I/O is pending, could do something in the meantime
+    #         # (display a progress bar, etc.).
+    #         # We just call select() to sleep until some more data is available.
+    #         self.m.select(0.2)
+    #         # await sleep(0.1)
+    #     self.anaylse_it(responses)
+    #     return responses
 
     def anaylse_it(self, responses):
         payload = self.info

@@ -78,7 +78,7 @@ if __name__ == '__main__':
                '1', '2', '3', '4',
            ]*1
     info = {
-        'celery_worker': 'netboy.celery.tasks.coroutine_worker',
+        'celery_worker': 'netboy.celery.tasks.pycurl_worker',
         'worker': 'netboy.celery.tasks.test',
         'celery_max_workers': 1,
         'celery_chunk_size':2,

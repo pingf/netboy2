@@ -3,7 +3,7 @@ from wrap.show import show
 
 from netboy.netboy import NetBoy
 from netboy.util.setup_log import setup_log
-from netboy.asyncio_pycurl.curl_one import work as curl_work
+from netboy.multi_pycurl.curl_one import work as curl_work
 
 
 def trigger_it(payload, response):

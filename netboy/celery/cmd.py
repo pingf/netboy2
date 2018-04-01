@@ -1,5 +1,6 @@
 import argparse
 
+
 from netboy.celery.app import App
 if __name__ == "__main__":
 

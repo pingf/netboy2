@@ -1,28 +1,28 @@
-import logging
-import random
-import pycurl
+# import logging
+# import random
+# import pycurl
 
-import asyncio
+# import asyncio
 from logcc.logcc import LogCC
 from termcc.cc import cc
 from termcc.core import red
 from worker.worker import Worker
 
-from netboy.asyncio_pycurl.curl_factory import CurlFactory
+from netboy.multi_pycurl.curl_factory import CurlFactory
 
 
-async def curl_handler(data, info):
+def curl_handler(data, info):
     factory = CurlFactory(data, info)
     factory.allocate()
-    r = await factory.run()
+    r = factory.run()
     return r
 
 
-def sync_curl_handler(data, info):
-    factory = CurlFactory(data, info)
-    factory.allocate()
-    r = factory.sync_run()
-    return r
+# def sync_curl_handler(data, info):
+#     factory = CurlFactory(data, info)
+#     factory.allocate()
+#     r = factory.sync_run()
+#     return r
 
 
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     ]
     info = {
-        'worker': 'netboy.asyncio_pycurl.async_handler.curl_handler',
+        'worker': 'netboy.multi_pycurl.multicurl_handler.curl_handler',
         'chunk_size': 5,
     }
 

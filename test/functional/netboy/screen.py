@@ -18,22 +18,22 @@ def print_screen(payload, response):
 if __name__ == '__main__':
     setup_log('netboy')
     data = [
-               'http://www.bing.com',
-               'http://www.hbcs.gov.cn',
-               'http://www.hnxcdj.com',
-               'http://www.ryzj.gov.cn',
-               'http://www.lhsajj.com',
-               'http://www.nysylj.com',
-               'http://www.nyszglc.com',
-               'http://www.ayjtj.gov.cn',
-               'http://www.hbxgtzyj.gov.cn',
-               'http://www.hnrdia.com',
-               'http://www.zmdggjy.com',
-               'http://www.xyxgtzyj.gov.cn',
-               'http://www.xxdsyjs.com',
-               'http://www.xixiaagri.gov.cn',
-               'http://www.xmdj.gov.cn',
-               'http://www.xysrsjzlzpksbmw.gov.cn',
+               "http://www.bing.com",
+               "http://www.hbcs.gov.cn",
+               "http://www.hnxcdj.com",
+               "http://www.ryzj.gov.cn",
+               # "http://www.lhsajj.com",
+               # "http://www.nysylj.com",
+               # "http://www.nyszglc.com",
+               # "http://www.ayjtj.gov.cn",
+               # "http://www.hbxgtzyj.gov.cn",
+               # "http://www.hnrdia.com",
+               # "http://www.zmdggjy.com",
+               # "http://www.xyxgtzyj.gov.cn",
+               # "http://www.xxdsyjs.com",
+               # "http://www.xixiaagri.gov.cn",
+               # "http://www.xmdj.gov.cn",
+               # "http://www.xysrsjzlzpksbmw.gov.cn",
            ] * 1
     # boy = NetBoy({'mode': 'coroutine'})
     # boy = NetBoy({'mode':'process'})

@@ -14,7 +14,7 @@ def read(fname):
 
 setup(
     name='netboy',
-    version='2018.03.19',
+    version='2018.04.02',
     url='https://github.com/pingf/netboy2.git',
     license='BSD',
     author='Jesse MENG',
@@ -24,7 +24,7 @@ setup(
     py_modules=['netboy'],
     # if you would be using a package instead use packages instead
     # of py_modules:
-    packages=['netboy', 'netboy.asyncio_pycurl', 'netboy.celery', 'netboy.remote', 'netboy.selenium_chrome',
+    packages=['netboy', 'netboy.multi_pycurl', 'netboy.celery', 'netboy.remote', 'netboy.selenium_chrome',
               'netboy.support', 'netboy.util'],
     zip_safe=False,
     package_data={
