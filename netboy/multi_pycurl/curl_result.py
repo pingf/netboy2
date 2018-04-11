@@ -83,7 +83,7 @@ def filter_content_result(c, json_response=False):
         else:
             if 'title' in curl_filter:
 
-                match = re.search('<title[^>]*>([^<]+)</title>', data)
+                match = re.search('<title[^>]*>([^<]+)</title>', data, re.IGNORECASE)
                 if match:
                     result['title'] = match.group(1)
                 else:
