@@ -11,14 +11,23 @@ from netboy.util.data_info import update_data_from_info
 from netboy.util.loader import load
 from netboy.util.timeout import timeout, exit_after
 
+DEFAULT_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm; Baiduspider/2.0; +http://www.baidu.com/search/spider.html) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80() Safari/537.36'
 
-@exit_after(15)
 def crawl(driver, data):
     url = data.get('url')
     crawl_url = data.get('effect') or url
     if not crawl_url.startswith('http'):
         crawl_url = 'http://' + crawl_url
     driver.get(crawl_url)
+    width = driver.execute_script(
+        "return Math.max(document.body.scrollWidth, document.body.offsetWidth, document.documentElement.clientWidth, document.documentElement.scrollWidth, document.documentElement.offsetWidth);")
+    height = driver.execute_script(
+        "return Math.max(document.body.scrollHeight, document.body.offsetHeight, document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight);")
+
+    # Add some pixels on top of the calculated dimensions for good
+    # measure to make the scroll bars disappear
+    #
+    driver.set_window_size(width + 100, height + 100)
     response = get_result(data, driver)
     return response
 
@@ -40,111 +49,6 @@ class ChromeFactory:
         self.driver = None
 
     # async def async_run(self):
-    #     load_timeout = self.info.get('timeout', 15)
-    #     script_timeout = self.info.get('script_timeout', 15)
-    #     implicit_wait = self.info.get('wait', 5)
-    #     if not self.driver:
-    #         chrome_bin = self.info.get('chrome', '/opt/google/chrome-beta/chrome')
-    #         window_size = self.info.get('window_size', '1920x1080')
-    #         proxy_type = self.info.get('proxytype')
-    #         user_agent = self.info.get('useragent')
-    #         if proxy_type == '5':
-    #             proxy_type = 'socks5'
-    #         if proxy_type == '4':
-    #             proxy_type = 'socks4'
-    #         proxy = self.info.get('proxy')
-    #         proxy_port = self.info.get('proxyport')
-    #
-    #         options = webdriver.ChromeOptions()
-    #         options.binary_location = chrome_bin
-    #         options.add_argument("user-agent=%s" % user_agent)
-        #     # options.add_argument('headless')
-        #     options.set_headless(headless=True)
-        #
-        #     options.add_argument('window-size=' + window_size)
-        #     options.add_argument('--no-referrers')
-        #     # options.add_argument('--proxy-server=http://127.0.0.1:8123')
-        #     # options.add_argument('--proxy-server=https://127.0.0.1:8123')
-        #     # options.add_argument('--proxy-server=socks5://127.0.0.1:1082')
-        #     if proxy and proxy_type and proxy_port:
-        #         options.add_argument('--proxy-server=%s://%s:%d' % (proxy_type, proxy, proxy_port))
-        #
-        #     self.driver = webdriver.Chrome(chrome_options=options)
-        #     self.driver.implicitly_wait(implicit_wait)
-        #     self.driver.set_page_load_timeout(load_timeout)
-        #     self.driver.set_script_timeout(script_timeout)
-        # responses = []
-        #
-        # try:
-        #     crawl_func = exit_after(load_timeout)(crawl)
-        #     for d in self.updated:
-        #
-        #         prepare_resp = self.prepare_it(d)
-        #
-        #         if isinstance(prepare_resp, dict):
-        #             if prepare_resp.get('skip'):
-        #                 continue
-        #             if prepare_resp.get('cover'):
-        #                 response = self.trigger_it(d, prepare_resp)
-        #                 if self.info.get('mode') == 'celery':
-        #                     response.pop('data', None)
-        #                     response.pop('screen', None)
-        #                 responses.append(response)
-        #                 continue
-        #
-        #         start = time.time()
-        #         url = d.get('url')
-        #         try:
-        #             response = crawl_func(self.driver, d)
-        #             if response is None:
-        #                 end = time.time()
-        #                 response_time = '%s' % (end - start)
-        #                 msg = "failed! url: " + str(url)
-        #                 self.log.warning(msg)
-        #                 response = {
-        #                     'url': url,
-        #                     'effect': url,
-        #                     'data': '',
-        #                     'title': '',
-        #                     'spider': 'chrome',
-        #                     'state': 'error',
-        #                     "code": -2,
-        #                     "time": response_time
-        #                 }
-        #             else:
-        #                 interact = d.get('interactive')
-        #                 if interact:
-        #                     inter_func = load(interact)
-        #                     inter_func(d, self.driver)
-        #                 end = time.time()
-        #                 d['time'] = '%s' % (end - start)
-        #                 msg = "success! url: " + str(url) + ' effect: ' + str(self.driver.current_url)
-        #                 self.log.info(msg)
-        #         except Exception as e:
-        #             end = time.time()
-        #             response_time = '%s' % (end - start)
-        #             msg = "failed! url: " + str(url) + ' errtype: ' + str(type(e)) + ' errmsg: ' + str(e)
-        #             self.log.warning(msg)
-        #             response = {
-        #                 'url': url,
-        #                 'effect': url,
-        #                 'data': '',
-        #                 'title': '',
-        #                 'spider': 'chrome',
-        #                 'state': 'error',
-        #                 "code": -1,
-        #                 "time": response_time
-        #             }
-        #         response = self.trigger_it(d, response)
-        #         if self.info.get('mode') == 'celery':
-        #             response.pop('data', None)
-        #             response.pop('screen', None)
-        #         responses.append(response)
-        #     self.anaylse_it(responses)
-        # finally:
-        #     self.driver.quit()
-        #     self.driver = None
-        # return responses
 
     def run(self):
         load_timeout = self.info.get('timeout', 15)
@@ -152,8 +56,12 @@ class ChromeFactory:
         implicit_wait = self.info.get('wait', 5)
         if not self.driver:
             chrome_bin = self.info.get('chrome', '/opt/google/chrome-beta/chrome')
-            window_size = self.info.get('window_size', '1920x1080')
+            # window_size = self.info.get('window_size', '2048x4096')
             proxy_type = self.info.get('proxytype')
+            user_agent = self.info.get('useragent', DEFAULT_USER_AGENT)
+
+
+            lang = self.info.get('lang', 'zh,zh-CN')
             if proxy_type == '5':
                 proxy_type = 'socks5'
             if proxy_type == '4':
@@ -168,14 +76,33 @@ class ChromeFactory:
             options.add_argument("--dns-prefetch-disable")
             options.add_argument('--no-referrers')
 
-            options.add_argument('window-size=' + window_size)
+            # options.add_argument('window-size=' + window_size)
             # options.add_argument('--proxy-server=http://127.0.0.1:8123')
             # options.add_argument('--proxy-server=https://127.0.0.1:8123')
             # options.add_argument('--proxy-server=socks5://127.0.0.1:1082')
             if proxy and proxy_type and proxy_port:
                 options.add_argument('--proxy-server=%s://%s:%d' % (proxy_type, proxy, proxy_port))
 
-            self.driver = webdriver.Chrome(chrome_options=options)
+            if user_agent:
+                options.add_argument("--user-agent=" + user_agent)
+
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-audio')
+            if lang:
+                options.add_experimental_option('prefs', {'intl.accept_languages': lang})
+
+                # options.add_argument('lang='+lang)
+
+
+            try:
+                self.driver = webdriver.Chrome(chrome_options=options)
+                # size = self.driver.get_window_size('current')
+                # self.driver.set_window_size(size.get('width'), size.get('height'))
+
+
+            except Exception as e:
+                print(e)
+                raise e
             self.driver.implicitly_wait(implicit_wait)
             self.driver.set_page_load_timeout(load_timeout)
             self.driver.set_script_timeout(script_timeout)
@@ -249,8 +176,10 @@ class ChromeFactory:
                 responses.append(response)
             self.anaylse_it(responses)
         finally:
-            self.driver.quit()
-            self.driver = None
+            if self.driver:
+
+                self.driver.quit()
+                self.driver = None
         return responses
 
     def anaylse_it(self, responses):
