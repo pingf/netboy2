@@ -9,7 +9,6 @@ from netboy.celery.app import App
 from netboy.selenium_chrome.chrome_result import get_result
 from netboy.util.data_info import update_data_from_info
 from netboy.util.loader import load
-from netboy.util.timeout import timeout, exit_after
 
 DEFAULT_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm; Baiduspider/2.0; +http://www.baidu.com/search/spider.html) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.80() Safari/537.36'
 
@@ -47,8 +46,6 @@ class ChromeFactory:
                 continue
         self.updated = updated
         self.driver = None
-
-    # async def async_run(self):
 
     def run(self):
         load_timeout = self.info.get('timeout', 15)
@@ -92,16 +89,10 @@ class ChromeFactory:
                 options.add_experimental_option('prefs', {'intl.accept_languages': lang})
 
                 # options.add_argument('lang='+lang)
-
-
             try:
                 self.driver = webdriver.Chrome(chrome_options=options)
-                # size = self.driver.get_window_size('current')
-                # self.driver.set_window_size(size.get('width'), size.get('height'))
-
-
             except Exception as e:
-                print(e)
+                self.log.warning('error: '+str(e)+' error_type: '+str(type(e)))
                 raise e
             self.driver.implicitly_wait(implicit_wait)
             self.driver.set_page_load_timeout(load_timeout)
@@ -109,7 +100,7 @@ class ChromeFactory:
 
         responses = []
         try:
-            crawl_func = exit_after(load_timeout)(crawl)
+            # crawl_func = exit_after(load_timeout)(crawl)
             for d in self.updated:
 
                 prepare_resp = self.prepare_it(d)
@@ -128,7 +119,7 @@ class ChromeFactory:
                 start = time.time()
                 url = d.get('url')
                 try:
-                    response = crawl_func(self.driver, d)
+                    response = crawl(self.driver, d)
                     if response is None:
                         end = time.time()
                         response_time = '%s' % (end - start)
@@ -177,7 +168,6 @@ class ChromeFactory:
             self.anaylse_it(responses)
         finally:
             if self.driver:
-
                 self.driver.quit()
                 self.driver = None
         return responses

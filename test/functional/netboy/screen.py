@@ -1,6 +1,7 @@
 import base64
 import logging
 
+from io import BytesIO
 from netboy.netboy import NetBoy
 from netboy.util.setup_log import setup_log
 
@@ -27,7 +28,14 @@ def print_screen(payload, response):
         if image.mode in ("RGBA", "P"):
             image = image.convert("RGB")
 
-        image.save(url+'.jpg', 'JPEG', dpi=[300,300], quality=60)
+        file = BytesIO()
+        # image.save(file, 'JPEG', dpi=[300,300], quality=60)
+        image.save(file, 'WEBP', quality=60)#, dpi=[300,300], quality=60)
+        from store.seaweed import SeaweedStore
+        store = SeaweedStore({'host': payload.get('weed_host', '192.168.199.203'), 'port': payload.get('weed_port', 9333)})
+        res = store.create(url + '.webp', file.getvalue())
+        # print(res)
+        # print(file.getvalue()[:100])
     else:
         print(response)
 
@@ -35,11 +43,11 @@ def print_screen(payload, response):
 if __name__ == '__main__':
     setup_log('netboy')
     data = [
-        "http://172.30.0.3:9992",
+        # "http://172.30.0.3:9992",
         "http://ip.cn",
-        "http://www.cnbeta.com",
+        # "http://www.cnbeta.com",
 
-        "http://www.hxsjjq.gov.cn",
+        # "http://www.hxsjjq.gov.cn",
         "http://www.douban.com"
                # "http://www.bing.com",
                # "http://www.hbcs.gov.cn",
