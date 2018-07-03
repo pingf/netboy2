@@ -14,7 +14,7 @@ def read(fname):
 
 setup(
     name='netboy',
-    version='2018.05.02',
+    version='2018.07.01',
     url='https://github.com/pingf/netboy2.git',
     license='BSD',
     author='Jesse MENG',

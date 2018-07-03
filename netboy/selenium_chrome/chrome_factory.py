@@ -4,6 +4,7 @@ import logging
 import time
 
 from selenium import webdriver
+from selenium.webdriver import DesiredCapabilities
 
 from netboy.celery.app import App
 from netboy.selenium_chrome.chrome_result import get_result
@@ -33,7 +34,6 @@ def crawl(driver, data):
 
 class ChromeFactory:
     def __init__(self, data, info):
-        self.log = logging.getLogger(info.get('logger_name', 'worker'))
         self.data = data
         self.info = info
         self.log = logging.getLogger(info.get('log', 'netboy'))
@@ -60,7 +60,7 @@ class ChromeFactory:
 
             lang = self.info.get('lang', 'zh,zh-CN')
             if proxy_type == '5':
-                proxy_type = 'socks5'
+                proxy_type = 'socks5h'
             if proxy_type == '4':
                 proxy_type = 'socks4'
             proxy = self.info.get('proxy')
@@ -85,12 +85,18 @@ class ChromeFactory:
 
             options.add_argument('--disable-gpu')
             options.add_argument('--disable-audio')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--ignore-certificate-errors')
+            options.add_argument('--allow-insecure-localhost')
             if lang:
                 options.add_experimental_option('prefs', {'intl.accept_languages': lang})
 
                 # options.add_argument('lang='+lang)
+            capabilities = DesiredCapabilities.CHROME.copy()
+            capabilities['acceptSslCerts'] = True
+            capabilities['acceptInsecureCerts'] = True
             try:
-                self.driver = webdriver.Chrome(chrome_options=options)
+                self.driver = webdriver.Chrome(chrome_options=options, desired_capabilities=capabilities)
             except Exception as e:
                 self.log.warning('error: '+str(e)+' error_type: '+str(type(e)))
                 raise e

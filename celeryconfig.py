@@ -10,6 +10,7 @@ if '.' not in ip:
 broker_url = os.environ.get('CELERY_BROKER_URL', 'amqp://dameng:hello@' + ip + '/netboy')
 result_backend = os.environ.get('CELERY_RESULT_URL', 'redis://:hello@' + ip + ':6379/2')
 
+
 # worker_prefetch_multiplier = 1
 # worker_concurrency = 4
 # worker_hijack_root_logger = False

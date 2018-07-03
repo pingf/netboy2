@@ -42,56 +42,66 @@ def filter_content_result(c, json_response=False):
     if 'data' in curl_filter or 'charset' in curl_filter or 'title' in curl_filter:
         body = c.databuf.getvalue()
 
-        charset = c.data.get('charset')
-        if charset:
-            data = body.decode(charset, 'ignore')
+        if c.data.get('raw', False) == True:
+            data = body
+            charset = None
+            if 'data' in curl_filter:
+                result['data'] = data
+            if 'charset' in curl_filter:
+                result['charset'] = charset
+            if 'title' in curl_filter:
+                result['title'] = None
         else:
-            if len(body) == 0:
-                data = ''
-                charset = 'utf8'
-            elif 'content-type' in c.headers:
-                content_type = c.headers['content-type'].lower()
-                match = re.search('charset=([a-zA-Z\-_0-9]+)', content_type)
-                if match:
-                    charset = match.group(1)
-                charset = safe_cn_charset(charset)
-                try:
-                    data = body.decode(charset)
-                except Exception as exc:
-                    data, charset = beautify(body)
-
+            charset = c.data.get('charset')
+            if charset:
+                data = body.decode(charset, 'ignore')
             else:
-                utf8_data = body.decode('utf8', 'ignore')
-                match = re.search('charset=([a-zA-Z\-_0-9]+)', utf8_data)
-                if match:
-                    charset = match.group(1)
+                if len(body) == 0:
+                    data = ''
+                    charset = 'utf8'
+                elif 'content-type' in c.headers:
+                    content_type = c.headers['content-type'].lower()
+                    match = re.search('charset=([a-zA-Z\-_0-9]+)', content_type)
+                    if match:
+                        charset = match.group(1)
                     charset = safe_cn_charset(charset)
                     try:
                         data = body.decode(charset)
                     except Exception as exc:
                         data, charset = beautify(body)
-                else:
-                    data, charset = beautify(body)
 
-        if c.data.get('json'):
-            try:
-                data = json.loads(data)
-            except Exception as e:
-                pass
-            if 'data' in curl_filter:
-                result['data'] = data
-        else:
-            if 'title' in curl_filter:
-
-                match = re.search('<title[^>]*>([^<]+)</title>', data, re.IGNORECASE)
-                if match:
-                    result['title'] = match.group(1)
                 else:
-                    result['title'] = ''
-            if 'data' in curl_filter:
-                result['data'] = data
-            if 'charset' in curl_filter:
-                result['charset'] = charset
+                    utf8_data = body.decode('utf8', 'ignore')
+                    match = re.search('charset=([a-zA-Z\-_0-9]+)', utf8_data)
+                    if match:
+                        charset = match.group(1)
+                        charset = safe_cn_charset(charset)
+                        try:
+                            data = body.decode(charset)
+                        except Exception as exc:
+                            data, charset = beautify(body)
+                    else:
+                        data, charset = beautify(body)
+
+            if c.data.get('json'):
+                try:
+                    data = json.loads(data)
+                except Exception as e:
+                    pass
+                if 'data' in curl_filter:
+                    result['data'] = data
+            else:
+                if 'title' in curl_filter:
+
+                    match = re.search('<title[^>]*>([^<]+)</title>', data, re.IGNORECASE)
+                    if match:
+                        result['title'] = match.group(1)
+                    else:
+                        result['title'] = ''
+                if 'data' in curl_filter:
+                    result['data'] = data
+                if 'charset' in curl_filter:
+                    result['charset'] = charset
     return result
 
 

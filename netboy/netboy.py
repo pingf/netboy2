@@ -17,6 +17,13 @@ class NetBoy:
         self.info['proxyport'] = int(p[1])
         return self
 
+    def use_http_proxy(self, proxy):
+        p = proxy.split(':')
+        self.info['proxytype'] = 'http'
+        self.info['proxy'] = p[0]
+        self.info['proxyport'] = int(p[1])
+        return self
+
     def use_queue(self, queue):
         self.info['queue'] = queue
         return self
@@ -77,6 +84,9 @@ class NetBoy:
         spider = self.info.get('spider')
         if spider:
             self.use_spider(spider)
+        else:
+            if mode == 'coroutine':
+                self.use_spider('aiohttp')
         return self
 
     def use_spider(self, spider='pycurl'):
@@ -91,16 +101,15 @@ class NetBoy:
                 self.info['celery_worker'] = 'netboy.celery.tasks.thread_worker'
                 self.info['worker'] = 'netboy.celery.tasks.chrome_worker_do_crawl'
                 self.info['final_callback'] = 'netboy.celery.tasks.final_callback'
-        # elif mode == 'coroutine':
-        #     if spider == 'pycurl':
-        #         self.info['worker'] = 'netboy.multi_pycurl.multicurl_handler.curl_handler'
-        #     elif spider == 'chrome':
-        #         self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
+        elif mode == 'coroutine' and spider == 'aiohttp':
+            self.info['worker'] = 'netboy.aio_http.aiohttp_handler.aiohttp_handler'
         else:
             if spider == 'pycurl':
                 self.info['worker'] = 'netboy.multi_pycurl.multicurl_handler.curl_handler'
             elif spider == 'chrome':
                 self.info['worker'] = 'netboy.selenium_chrome.chrome_driver_handler.chrome_driver_handler'
+            elif spider == 'aiohttp':
+                self.info['worker'] = 'netboy.aio_http.aiohttp_handler.aio_http_handler'
         return self
 
     def use_workers(self, workers=8, chunk_size1=40, chunk_size2=8):
@@ -166,57 +175,79 @@ class NetBoy:
         resp = curl_work(payload, logger='netboy')
         return resp
 
+def write_test(chunk, data, fd=None):
+    fd.write(chunk)
+
 
 if __name__ == '__main__':
-    data = [
-               # 'http://www.xixiaagri.gov.cn/'
-               # 'http://www.xxdsyjs.com'
-               # 'http://www.puyangdangshi.com'
 
-
-
-               # 'http://www.csdn.net',
-               'http://www.bing.com',
-               # 'http://www.douban.com',
-               # 'http://www.qxjtzf.com',
-               # 'http://www.lyzbj.org.cn',
-               # 'http://www.hnhxrs.com',
-               # 'http://www.puyangdangshi.com',
-               # 'http://www.bfhbj.com',
-               # 'http://www.xxlyj.cn',
-               # 'http://www.xcsnks.cn',
-               # 'http://www.xcswmw.cn',
-               # 'http://www.xcsqxj.com',
-               # 'http://www.hnpopss.gov.cn',
-               # 'http://www.lyjtj.com',
-               # 'http://www.rndj.com',
-               # 'http://www.nxzj.com.cn',
-               # 'http://www.ycxyw.gov.cn',
-               # 'http://www.hnyssw.gov.cn',
-               # 'http://www.hbcs.gov.cn',
-               # 'http://www.hnxcdj.com',
-               # 'http://www.ryzj.gov.cn',
-               # 'http://www.lhsajj.com',
-               # 'http://www.nysylj.com',
-               # 'http://www.nyszglc.com',
-               # 'http://www.ayjtj.gov.cn',
-               # 'http://www.hbxgtzyj.gov.cn',
-               # 'http://www.hnrdia.com',
-               # 'http://www.zmdggjy.com',
-               # 'http://www.xyxgtzyj.gov.cn',
-               # 'http://www.xxdsyjs.com',
-               # 'http://www.xixiaagri.gov.cn',
-               # 'http://www.xmdj.gov.cn',
-               # 'http://www.xysrsjzlzpksbmw.gov.cn',
-
-           ] * 1
-    boy = NetBoy()
-    boy.use_analysers([
-        'netboy.support.analysers.analyse_it'
-    ]).use_queue(
-        'worker'
-    ).use_spider(
-        'pycurl'
-    ).use_filter(['url', 'title']).use_workers()
+    # info={'charset': 'gb2312', 'filter':['title', 'url', 'charset', 'code', 'method', 'headers', 'cookies', 'time']}
+    # data=['http://www.bing.com','http://www.csdn.net']#, 'http://www.google.com' ]
+    info = {
+        'stream': {
+            'func': 'netboy.netboy.write_test',
+            'file': 'test.jpg'
+        }
+    }
+    # data=['http://www.bing.com','http://www.csdn.net']#, 'http://www.google.com' ]
+    data=['https://img3.doubanio.com/view/status/raw/public/ca19211898467d3.jpg']#, 'http://www.google.com' ]
+    # f = AIOHttpFactory(data, info)
+    # f.run()
+    boy = NetBoy(info)
+    boy.use_mode('coroutine').use_spider('aiohttp')
     resp = boy.run(data)
-    # print(resp)
+    print(resp)
+
+
+    # data = [
+    #            # 'http://www.xixiaagri.gov.cn/'
+    #            # 'http://www.xxdsyjs.com'
+    #            # 'http://www.puyangdangshi.com'
+    #
+    #
+    #
+    #            # 'http://www.csdn.net',
+    #            'http://www.bing.com',
+    #            # 'http://www.douban.com',
+    #            # 'http://www.qxjtzf.com',
+    #            # 'http://www.lyzbj.org.cn',
+    #            # 'http://www.hnhxrs.com',
+    #            # 'http://www.puyangdangshi.com',
+    #            # 'http://www.bfhbj.com',
+    #            # 'http://www.xxlyj.cn',
+    #            # 'http://www.xcsnks.cn',
+    #            # 'http://www.xcswmw.cn',
+    #            # 'http://www.xcsqxj.com',
+    #            # 'http://www.hnpopss.gov.cn',
+    #            # 'http://www.lyjtj.com',
+    #            # 'http://www.rndj.com',
+    #            # 'http://www.nxzj.com.cn',
+    #            # 'http://www.ycxyw.gov.cn',
+    #            # 'http://www.hnyssw.gov.cn',
+    #            # 'http://www.hbcs.gov.cn',
+    #            # 'http://www.hnxcdj.com',
+    #            # 'http://www.ryzj.gov.cn',
+    #            # 'http://www.lhsajj.com',
+    #            # 'http://www.nysylj.com',
+    #            # 'http://www.nyszglc.com',
+    #            # 'http://www.ayjtj.gov.cn',
+    #            # 'http://www.hbxgtzyj.gov.cn',
+    #            # 'http://www.hnrdia.com',
+    #            # 'http://www.zmdggjy.com',
+    #            # 'http://www.xyxgtzyj.gov.cn',
+    #            # 'http://www.xxdsyjs.com',
+    #            # 'http://www.xixiaagri.gov.cn',
+    #            # 'http://www.xmdj.gov.cn',
+    #            # 'http://www.xysrsjzlzpksbmw.gov.cn',
+    #
+    #        ] * 1
+    # boy = NetBoy()
+    # boy.use_analysers([
+    #     'netboy.support.analysers.analyse_it'
+    # ]).use_queue(
+    #     'worker'
+    # ).use_spider(
+    #     'pycurl'
+    # ).use_filter(['url', 'title']).use_workers()
+    # resp = boy.run(data)
+    # # print(resp)
