@@ -123,7 +123,7 @@ class ChromeFactory:
                         continue
 
                 start = time.time()
-                url = d.get('url')
+                url = d.get('url') if isinstance(d, dict) else d
                 try:
                     response = crawl(self.driver, d)
                     if response is None:

@@ -1,3 +1,4 @@
+import json
 import re
 import time
 
@@ -7,82 +8,6 @@ from netboy.netboy import NetBoy
 from netboy.util.loader import load
 
 
-async def fetch(data, session, json_response=False):
-    if isinstance(data, str):
-        data ={
-            'url': data,
-        }
-    url = data.get('url')
-    filter = data.get('filter')
-    if not filter:
-        filter = ['data', 'time', 'title', 'code']
-
-    results = {'url': url}
-    start_time = time.time()
-    async with session.get(url) as response:
-        # delay = response.headers.get("DELAY")
-        # date = response.headers.get("DATE")
-        # print("{}:{} with delay {}".format(date, response.url, delay))
-        # content = await response.read()
-        stream = data.get('stream')
-        if isinstance(stream, dict):
-            stream_func = stream.get('func')
-            stream_func = load(stream_func)
-            stream_chunk = stream.get('chunk', 512)
-            stream_file = stream.get('file')
-            count = 0
-            if stream_file:
-                with open(stream_file, 'wb') as fd:
-                    while True:
-                        chunk = await response.content.read(stream_chunk)
-                        count += 1
-                        if not chunk:
-                            break
-                        stream_func(chunk, data, fd)
-            else:
-                while True:
-                    chunk = await resp.content.read(stream_chunk)
-                    count += 1
-                    if not chunk:
-                        break
-                    stream_func(chunk, data)
-            results['stream'] = {
-                'chunk': stream_chunk,
-                'count': count
-            }
-        elif 'data' in filter or 'charset' in filter or 'title' in filter:
-            charset = data.get('charset')
-            if json_response is False:
-                if charset:
-                    raw = await response.read()
-                    content = raw.decode('utf8', errors='ignore')
-                else:
-                    content = await response.text()
-            else:
-                content = await response.json()
-
-            match = re.search('<title[^>]*>([^<]+)</title>', content, re.IGNORECASE)
-            title = match.group(1) if match else ''
-
-            if 'data' in filter:
-                results['data'] = content
-            if 'charset' in filter:
-                results['charset'] = charset
-            if 'title' in filter:
-                results['title'] = title
-        if 'headers' in filter:
-            results['headers'] = {k:v for k,v in response.headers.items()}
-        if 'cookies' in filter:
-            results['cookies'] = {k:v for k,v in response.cookies.items()}
-        if 'effect' in filter:
-            results['effect'] = response.real_url
-        if 'code' in filter:
-            results['code'] = response.status
-        if 'method' in filter:
-            results['method'] = response.method
-        if 'time' in filter:
-            results['time'] = time.time() - start_time
-        return results
 
 
 
@@ -106,109 +31,103 @@ async def fetch(data, session, json_response=False):
 
 class AIOHttpFactory(BaseFactory):
 
+    # def __init__(self, data, info):
+    #     super(AIOHttpFactory, self).__init__(data, info)
+
+
     async def run(self):
         ses = self.info.get('session')
-        responses = []
-        for data in self.updated:
-            resp = await fetch(data, ses)
-            responses.append(resp)
-        return responses
+        return await self.run_core_async('aiohttp', self.fetch, ses)
 
+
+    async def fetch(self, data, session, json_response=False):
+        if isinstance(data, str):
+            data ={
+                'url': data,
+            }
+        url = data.get('url')
+        filter = data.get('filter')
+        if not filter:
+            filter = ['data', 'title', 'code']
+
+        results = {'url': url}
+        async with session.get(url) as response:
+            # delay = response.headers.get("DELAY")
+            # date = response.headers.get("DATE")
+            # print("{}:{} with delay {}".format(date, response.url, delay))
+            # content = await response.read()
+            stream = data.get('stream')
+            if isinstance(stream, dict):
+                stream_func = stream.get('func')
+                stream_func = load(stream_func)
+                stream_chunk = stream.get('chunk', 512)
+                stream_file = stream.get('file')
+                count = 0
+                if stream_file:
+                    with open(stream_file, 'wb') as fd:
+                        while True:
+                            chunk = await response.content.read(stream_chunk)
+                            count += 1
+                            if not chunk:
+                                break
+                            stream_func(chunk, data, fd)
+                else:
+                    while True:
+                        chunk = await resp.content.read(stream_chunk)
+                        count += 1
+                        if not chunk:
+                            break
+                        stream_func(chunk, data)
+                results['stream'] = {
+                    'chunk': stream_chunk,
+                    'count': count
+                }
+            elif 'data' in filter or 'charset' in filter or 'title' in filter:
+                charset = data.get('charset')
+                if json_response is False:
+                    if charset:
+                        raw = await response.read()
+                        content = raw.decode('utf8', errors='ignore')
+                    else:
+                        content = await response.text()
+                else:
+                    content = await response.json()
+
+                match = re.search('<title[^>]*>([^<]+)</title>', content, re.IGNORECASE)
+                title = match.group(1) if match else ''
+
+                if 'data' in filter:
+                    results['data'] = content
+                if 'charset' in filter:
+                    results['charset'] = charset
+                if 'title' in filter:
+                    results['title'] = title
+            if 'headers' in filter:
+                results['headers'] = {k:v for k,v in response.headers.items()}
+            if 'cookies' in filter:
+                results['cookies'] = {k:v for k,v in response.cookies.items()}
+            if 'effect' in filter:
+                results['effect'] = response.real_url
+            if 'code' in filter:
+                results['code'] = response.status
+            if 'method' in filter:
+                results['method'] = response.method
+            return results
 
 if __name__ == '__main__':
-    info={}
+    info={'chunk_size': 1}
     data=['http://www.baidu.com', 'http://www.bing.com']#, 'http://www.google.com' ]
     # f = AIOHttpFactory(data, info)
     # f.run()
-    boy = NetBoy()
-    boy.use_mode('coroutine').use_spider('aiohttp').use_filter(['title', 'url', 'title', 'code'])
+    boy = NetBoy(info=info)
+    boy.use_mode('coroutine').use_spider('aiohttp').use_filter(['title', 'url', 'title', 'code', 'time'])
     resp = boy.run(data)
-    print(resp.keys())
-    # print(json.dumps(resp, indent=2))
+    # print(resp.keys())
+    print(json.dumps(resp, indent=2, ensure_ascii=False))
 
 
 
 
 
 
-
-        # timeout = self.info.get('timeout', 15)
-
-
-        #
-        #
-        #
-        #
-        #
-        #
-        #     for d in self.updated:
-        #
-        #         prepare_resp = self.prepare_it(d)
-        #
-        #         if isinstance(prepare_resp, dict):
-        #             if prepare_resp.get('skip'):
-        #                 continue
-        #             if prepare_resp.get('cover'):
-        #                 response = self.trigger_it(d, prepare_resp)
-        #                 if self.info.get('mode') == 'celery':
-        #                     response.pop('data', None)
-        #                     response.pop('screen', None)
-        #                 responses.append(response)
-        #                 continue
-        #
-        #         start = time.time()
-        #         url = d.get('url')
-        #         try:
-        #             response = crawl(self.driver, d)
-        #             if response is None:
-        #                 end = time.time()
-        #                 response_time = '%s' % (end - start)
-        #                 msg = "failed! url: " + str(url)
-        #                 self.log.warning(msg)
-        #                 response = {
-        #                     'url': url,
-        #                     'effect': url,
-        #                     'data': '',
-        #                     'title': '',
-        #                     'spider': 'chrome',
-        #                     'state': 'error',
-        #                     "code": -2,
-        #                     "time": response_time
-        #                 }
-        #             else:
-        #                 interact = d.get('interactive')
-        #                 if interact:
-        #                     inter_func = load(interact)
-        #                     inter_func(d, self.driver)
-        #                 end = time.time()
-        #                 d['time'] = '%s' % (end - start)
-        #                 msg = "success! url: " + str(url) + ' effect: ' + str(self.driver.current_url)
-        #                 self.log.info(msg)
-        #
-        #         except Exception as e:
-        #             end = time.time()
-        #             response_time = '%s' % (end - start)
-        #             msg = "failed! url: " + str(url) + ' errtype: ' + str(type(e)) + ' errmsg: ' + str(e)
-        #             self.log.warning(msg)
-        #             response = {
-        #                 'url': url,
-        #                 'effect': url,
-        #                 'data': '',
-        #                 'title': '',
-        #                 'spider': 'chrome',
-        #                 'state': 'error',
-        #                 "code": -1,
-        #                 "time": response_time
-        #             }
-        #         response = self.trigger_it(d, response)
-        #         if self.info.get('mode') == 'celery':
-        #             response.pop('data', None)
-        #             response.pop('screen', None)
-        #         responses.append(response)
-        #     self.anaylse_it(responses)
-        # finally:
-        #     if self.driver:
-        #         self.driver.quit()
-        #         self.driver = None
-        # return responses
 

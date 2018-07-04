@@ -1,4 +1,5 @@
 import logging
+import time
 
 from netboy.util.data_info import update_data_from_info
 from netboy.util.loader import load
@@ -100,4 +101,119 @@ class BaseFactory:
                 except Exception as e:
                     self.log.critical('analyser failed: ' + str(e))
 
+        return responses
+
+    async def run_core_async(self, spider, func, extra=None):
+        func = load(func) if isinstance(func, str) else func
+        responses = []
+        print(self.updated, '.....')
+        for d in self.updated:
+            prepare_resp = self.prepare_it(d)
+            url = d.get('url') if isinstance(d, dict) else d
+
+            if isinstance(prepare_resp, dict):
+                if prepare_resp.get('skip'):
+                    continue
+                if prepare_resp.get('cover'):
+                    response = self.trigger_it(d, prepare_resp)
+                    responses.append(response)
+                    continue
+            start = time.time()
+            try:
+                response = await func(d, extra)
+                if response is None:
+                    end = time.time()
+                    response_time = '%s' % (end - start)
+                    msg = "failed! url: " + str(url)
+                    self.log.warning(msg)
+                    response = {
+                        'url': url,
+                        'effect': url,
+                        'data': '',
+                        'title': '',
+                        'spider': spider,
+                        'state': 'error',
+                        "code": -2,
+                        "time": response_time
+                    }
+                else:
+                    end = time.time()
+                    d['time'] = '%s' % (end - start)
+                    msg = "success! url: " + str(url)
+                    self.log.info(msg)
+            except Exception as e:
+                end = time.time()
+                response_time = '%s' % (end - start)
+                msg = "failed! url: " + str(url) + ' errtype: ' + str(type(e)) + ' errmsg: ' + str(e)
+                self.log.warning(msg)
+                response = {
+                    'url': url,
+                    'effect': url,
+                    'data': '',
+                    'title': '',
+                    'spider': spider,
+                    'state': 'error',
+                    "code": -1,
+                    "time": response_time
+                }
+            response = self.trigger_it(d, response)
+            responses.append(response)
+        self.anaylse_it(responses)
+        return responses
+
+    def run_core(self, spider, func, extra=None):
+        func = load(func) if isinstance(func, str) else func
+        responses = []
+        for d in self.updated:
+            prepare_resp = self.prepare_it(d)
+            url = d.get('url') if isinstance(d, dict) else d
+
+            if isinstance(prepare_resp, dict):
+                if prepare_resp.get('skip'):
+                    continue
+                if prepare_resp.get('cover'):
+                    response = self.trigger_it(d, prepare_resp)
+                    responses.append(response)
+                    continue
+            start = time.time()
+            try:
+                response = func(d, extra)
+                if response is None:
+                    end = time.time()
+                    response_time = '%s' % (end - start)
+                    msg = "failed! url: " + str(url)
+                    self.log.warning(msg)
+                    response = {
+                        'url': url,
+                        'effect': url,
+                        'data': '',
+                        'title': '',
+                        'spider': spider,
+                        'state': 'error',
+                        "code": -2,
+                        "time": response_time
+                    }
+                else:
+                    end = time.time()
+                    d['time'] = '%s' % (end - start)
+                    msg = "success! url: " + str(url)
+                    self.log.info(msg)
+            except Exception as e:
+                end = time.time()
+                response_time = '%s' % (end - start)
+                msg = "failed! url: " + str(url) + ' errtype: ' + str(type(e)) + ' errmsg: ' + str(e)
+                self.log.warning(msg)
+                response = {
+                    'url': url,
+                    'effect': url,
+                    'data': '',
+                    'title': '',
+                    'spider': spider,
+                    'state': 'error',
+                    "code": -1,
+                    "time": response_time
+                }
+            response = self.trigger_it(d, response)
+            responses.append(response)
+        self.anaylse_it(responses)
         return responses
